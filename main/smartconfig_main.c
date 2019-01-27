@@ -253,19 +253,10 @@ void tcp_server_task(void *pvParameters)
     vTaskDelete(NULL);
 }
 
-void hello_world_task(){
-    while(1){
-        ESP_LOGI(TAG, "HELLO_WORLD \n");
-        vTaskDelay(1000);
-    }
-}
-
 void app_main()
 {
     ESP_ERROR_CHECK( nvs_flash_init() );
     initialise_wifi();
-    // ESP_LOGI(TAG, "tcp_server creater");
-    // xTaskCreate(hello_world_task, "hello_world_task", 1024, NULL, 6, NULL);
     wait_for_ip();
 }
 
