@@ -27,7 +27,29 @@
 #include "lwip/sys.h"
 #include <lwip/netdb.h>
 
+#include "driver/i2c.h"
+
+#include "motor_defs.h"
+
 #define PORT 80
+
+//I2C Settings
+
+#define I2C_STM32_ADDRESS              0x30
+
+#define I2C_MASTER_SCL_IO          10               /*!< gpio number for I2C master clock */
+#define I2C_MASTER_SDA_IO          9               /*!< gpio number for I2C master data  */
+#define I2C_MASTER_NUM             I2C_NUM_1        /*!< I2C port number for master dev */
+#define I2C_MASTER_TX_BUF_DISABLE  0                /*!< I2C master do not need buffer */
+#define I2C_MASTER_RX_BUF_DISABLE  0                /*!< I2C master do not need buffer */
+#define I2C_MASTER_FREQ_HZ         400000           /*!< I2C master clock frequency */
+
+#define WRITE_BIT                          I2C_MASTER_WRITE /*!< I2C master write */
+#define READ_BIT                           I2C_MASTER_READ  /*!< I2C master read */
+#define ACK_CHECK_EN                       0x1              /*!< I2C master will check ack from slave*/
+#define ACK_CHECK_DIS                      0x0              /*!< I2C master will not check ack from slave */
+#define ACK_VAL                            0x0              /*!< I2C ack value */
+#define NACK_VAL                           0x1              /*!< I2C nack value */
 
 /* FreeRTOS event group to signal when we are connected & ready to make a request */
 static EventGroupHandle_t wifi_event_group;
@@ -46,6 +68,9 @@ wifi_config_t *wifi_config;
 
 void smartconfig_example_task(void * parm);
 void tcp_server_task(void *pvParameters);
+
+static void i2c_send(char *data);
+static esp_err_t i2c_master_write_slave(i2c_port_t i2c_num, uint8_t* data_wr, size_t size);
 
 static esp_err_t event_handler(void *ctx, system_event_t *event)
 {
@@ -236,11 +261,12 @@ void tcp_server_task(void *pvParameters)
                 ESP_LOGI(TAG, "Received %d bytes from %s:", len, addr_str);
                 ESP_LOGI(TAG, "%s", rx_buffer);
 
-                int err = send(sock, rx_buffer, len, 0);
-                if (err < 0) {
-                    ESP_LOGE(TAG, "Error occured during sending: errno %d", errno);
-                    break;
-                }
+                i2c_send(rx_buffer);
+                // int err = send(sock, rx_buffer, len, 0);
+                // if (err < 0) {
+                //     ESP_LOGE(TAG, "Error occured during sending: errno %d", errno);
+                //     break;
+                // }
             }
         }
 
@@ -253,10 +279,95 @@ void tcp_server_task(void *pvParameters)
     vTaskDelete(NULL);
 }
 
+/**
+ * @brief i2c sender function
+ */
+static esp_err_t i2c_master_write_slave(i2c_port_t i2c_num, uint8_t* data_wr, size_t size)
+{
+    i2c_cmd_handle_t cmd = i2c_cmd_link_create();
+    i2c_master_start(cmd);
+    i2c_master_write_byte(cmd, ( I2C_STM32_ADDRESS << 1 ) | WRITE_BIT, ACK_CHECK_EN);
+    i2c_master_write(cmd, data_wr, size, ACK_CHECK_EN);
+    i2c_master_stop(cmd);
+    esp_err_t ret = i2c_master_cmd_begin(i2c_num, cmd, 1000 / portTICK_RATE_MS);
+    i2c_cmd_link_delete(cmd);
+    return ret;
+}
+
+/**
+ * @brief i2c master initialization
+ */
+static void i2c_master_init()
+{
+    int i2c_master_port = I2C_MASTER_NUM;
+    i2c_config_t conf;
+    conf.mode = I2C_MODE_MASTER;
+    conf.sda_io_num = I2C_MASTER_SDA_IO;
+    conf.sda_pullup_en = GPIO_PULLUP_DISABLE;
+    conf.scl_io_num = I2C_MASTER_SCL_IO;
+    conf.scl_pullup_en = GPIO_PULLUP_DISABLE;
+    conf.master.clk_speed = I2C_MASTER_FREQ_HZ;
+    i2c_param_config(i2c_master_port, &conf);
+    i2c_driver_install(i2c_master_port, conf.mode,
+                       I2C_MASTER_RX_BUF_DISABLE,
+                       I2C_MASTER_TX_BUF_DISABLE, 0);
+}
+
+static void i2c_send(char *data)
+{
+    int ret;
+    uint8_t data_buffer[2];
+    if (strcmp(data,MOTORS_FORWARD) == 0){
+        data_buffer[0] = COMM_MOVE;
+        data_buffer[1] = MOVE_FORWARD;
+    } else if (strcmp(data,MOTORS_REVERSE) == 0)
+    {
+        data_buffer[0] = COMM_MOVE;
+        data_buffer[1] = MOVE_REVERSE;
+    } else if (strcmp(data,MOTORS_LEFT) == 0)
+    {
+        data_buffer[0] = COMM_MOVE;
+        data_buffer[1] = MOVE_LEFT;
+    } else if (strcmp(data,MOTORS_RIGHT) == 0)
+    {
+        data_buffer[0] = COMM_MOVE;
+        data_buffer[1] = MOVE_RIGHT;
+    } else if (strcmp(data,MOTORS_STOP) == 0)
+    {
+        data_buffer[0] = COMM_MOVE;
+        data_buffer[1] = MOVE_STOP;
+    }
+
+    ret = i2c_master_write_slave(I2C_MASTER_NUM, data_buffer, sizeof(data_buffer));
+    if (ret == ESP_ERR_TIMEOUT)
+        printf("i2c timeout\n");
+}
+// /**
+//  * @brief i2c test task
+//  */
+// static void i2c_task(void *arg)
+// {
+//     int ret;
+//     int message_counter = 0;
+//     uint8_t data_buffer[2] = { 1, 0x20};
+//     while(1){
+//         printf("message number: %d\n", message_counter++);
+//         ret = i2c_example_master_write_slave(I2C_EXAMPLE_MASTER_NUM, data_buffer, sizeof(data_buffer));
+//         if (ret == ESP_ERR_TIMEOUT)
+//             printf("i2c timeout\n");
+//         printf("returned code: %d\n", ret);
+//         vTaskDelay(500);
+//     } 
+// }
+
 void app_main()
 {
     ESP_ERROR_CHECK( nvs_flash_init() );
     initialise_wifi();
+    i2c_master_init();
+    // xTaskCreate(i2c_task, "i2c_master_sender_task", 2048, NULL, 10, NULL);
+    // ESP_LOGI(TAG, "tcp_server creater");
+    // xTaskCreate(hello_world_task, "hello_world_task", 1024, NULL, 6, NULL);
     wait_for_ip();
 }
 
