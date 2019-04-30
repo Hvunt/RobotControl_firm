@@ -164,7 +164,7 @@ void smartconfig_example_task(void * parm)
             ESP_LOGI(TAG, "smartconfig over");
             esp_smartconfig_stop();
             xTaskCreate(tcp_server_task, "tcp_server_task", 4096, NULL, 5, NULL);
-            // vTaskDelete(NULL);
+            vTaskDelete(NULL);
         }
     }
 }
@@ -261,19 +261,23 @@ void tcp_server_task(void *pvParameters)
                 ESP_LOGI(TAG, "Received %d bytes from %s:", len, addr_str);
                 ESP_LOGI(TAG, "%s", rx_buffer);
 
-                i2c_send(rx_buffer);
-                // int err = send(sock, rx_buffer, len, 0);
-                // if (err < 0) {
-                //     ESP_LOGE(TAG, "Error occured during sending: errno %d", errno);
-                //     break;
-                // }
+                // i2c_send(rx_buffer);
+                int err = send(sock, rx_buffer, len, 0);
+                if (err < 0) {
+                    ESP_LOGE(TAG, "Error occured during sending: errno %d", errno);
+                    break;
+                }
             }
         }
 
         if (sock != -1) {
             ESP_LOGE(TAG, "Shutting down socket and restarting...");
+            close(listen_sock);
+            vTaskDelay(1);
             shutdown(sock, 0);
+            vTaskDelay(1);
             close(sock);
+            vTaskDelay(1);
         }
     }
     vTaskDelete(NULL);
