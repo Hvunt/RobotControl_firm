@@ -12,14 +12,8 @@
 extern "C" {
 #endif
 
-//#ifdef STM32F1
-//#include "stm32f1xx_hal.h"
-//#else
-// #include "stm32f0xx_hal.h"
-//#endif
-
-// #include "main.h"
 #include "driver/i2c.h"
+#include "configs.h"
 #include <math.h>
 
 /*------===REGISTER MAP===------*/

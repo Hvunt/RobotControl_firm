@@ -30,6 +30,8 @@ extern "C" {
 #include "motor_defs.h"
 #include "e_compass.h"
 
+#include "configs.h"
+
 #ifdef __cplusplus
 }
 #endif
