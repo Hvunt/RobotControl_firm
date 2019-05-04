@@ -13,7 +13,7 @@
 /*static I2C_HandleTypeDef *hi2cP;*/
 
 //===Private constant and other data===
-#define PI 3.14159265358979323846f
+
 #define sampleFreq	10.0f
 //static float const alpha = 0.95;
 //static float const rad2deg = 180 / PI;
@@ -25,7 +25,6 @@ static float const aRes = 16384.f, gRes = 131, mRes = 0.6f; // scale resolutions
 static float magCalFactory[3] = { 0.0f, 0.0f, 0.0f };
 static float x_scale_factor = 0.0f, y_scale_factor = 0.0f;
 static float x_offset = 0.0f, y_offset = 0.0f;
-float q[4] = { 1.0f, 0.0f, 0.0f, 0.0f };
 float velocity_vectors[3];
 float accel_offset[3];
 //=============================

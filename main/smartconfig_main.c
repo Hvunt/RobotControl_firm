@@ -347,6 +347,7 @@ void app_main()
     ESP_ERROR_CHECK( nvs_flash_init() );
     initialise_wifi();
     i2c_master_init();
+    xTaskCreate(EC_ecTask, "EC_ecTask", 8196, NULL, 6, NULL);
     // xTaskCreate(i2c_task, "i2c_master_sender_task", 2048, NULL, 10, NULL);
     // ESP_LOGI(TAG, "tcp_server creater");
     // xTaskCreate(hello_world_task, "hello_world_task", 1024, NULL, 6, NULL);
