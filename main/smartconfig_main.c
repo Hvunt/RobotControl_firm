@@ -7,29 +7,8 @@
    CONDITIONS OF ANY KIND, either express or implied.
 */
 
-#include <string.h>
-#include <stdlib.h>
-#include <sys/param.h>
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "freertos/event_groups.h"
-#include "esp_wifi.h"
-#include "esp_wpa2.h"
-#include "esp_event_loop.h"
-#include "esp_log.h"
-#include "esp_system.h"
-#include "nvs_flash.h"
-#include "tcpip_adapter.h"
-#include "esp_smartconfig.h"
+#include "main.h"
 
-#include "lwip/err.h"
-#include "lwip/sockets.h"
-#include "lwip/sys.h"
-#include <lwip/netdb.h>
-
-#include "driver/i2c.h"
-
-#include "motor_defs.h"
 
 #define PORT 80
 
@@ -164,7 +143,7 @@ void smartconfig_example_task(void * parm)
             ESP_LOGI(TAG, "smartconfig over");
             esp_smartconfig_stop();
             xTaskCreate(tcp_server_task, "tcp_server_task", 4096, NULL, 5, NULL);
-            // vTaskDelete(NULL);
+            vTaskDelete(NULL);
         }
     }
 }
@@ -261,19 +240,23 @@ void tcp_server_task(void *pvParameters)
                 ESP_LOGI(TAG, "Received %d bytes from %s:", len, addr_str);
                 ESP_LOGI(TAG, "%s", rx_buffer);
 
-                i2c_send(rx_buffer);
-                // int err = send(sock, rx_buffer, len, 0);
-                // if (err < 0) {
-                //     ESP_LOGE(TAG, "Error occured during sending: errno %d", errno);
-                //     break;
-                // }
+                // i2c_send(rx_buffer);
+                int err = send(sock, rx_buffer, len, 0);
+                if (err < 0) {
+                    ESP_LOGE(TAG, "Error occured during sending: errno %d", errno);
+                    break;
+                }
             }
         }
 
         if (sock != -1) {
             ESP_LOGE(TAG, "Shutting down socket and restarting...");
             shutdown(sock, 0);
+            vTaskDelay(100);
+            close(listen_sock);
+            vTaskDelay(100);
             close(sock);
+            vTaskDelay(100);
         }
     }
     vTaskDelete(NULL);
