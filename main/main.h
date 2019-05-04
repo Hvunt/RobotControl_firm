@@ -28,6 +28,7 @@ extern "C" {
 #include "driver/i2c.h"
 
 #include "motor_defs.h"
+#include "e_compass.h"
 
 #ifdef __cplusplus
 }

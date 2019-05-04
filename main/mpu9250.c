@@ -8,11 +8,7 @@
 //==========Headers==========
 #include "mpu9250.h"
 
-#include "driver/i2c.h"
-#include "math.h"
-#include "MadgwickAHRS.h"
-
-// #include "main.h"
+// #include "driver/i2c.h"
 
 /*static I2C_HandleTypeDef *hi2cP;*/
 
@@ -201,24 +197,24 @@ int16_t MPU_GetTemp(void) {
 }
 
 /*---GET YAW, PITCH, ROLL, VELOCITY---*/
-float MPU_GetYaw(void) {
-	return atan2(2.0f * (q[1] * q[2] + q[0] * q[3]),
-			q[0] * q[0] + q[1] * q[1] - q[2] * q[2] - q[3] * q[3]) * 180 / PI;
-}
-float MPU_GetPitch(void) {
-	return -asin(2.0f * (q[1] * q[3] - q[0] * q[2])) * 180 / PI;
-}
-float MPU_GetRoll(void) {
-	return atan2(2.0f * (q[0] * q[1] + q[2] * q[3]),
-			q[0] * q[0] - q[1] * q[1] - q[2] * q[2] + q[3] * q[3]) * 180 / PI;
-}
-void MPU_GetAngles(float *data) {
-	if (sizeof(data) != 3)
-		return;
-	data[0] = MPU_GetYaw();
-	data[1] = MPU_GetPitch();
-	data[2] = MPU_GetRoll();
-}
+// float MPU_GetYaw(void) {
+// 	return atan2(2.0f * (q[1] * q[2] + q[0] * q[3]),
+// 			q[0] * q[0] + q[1] * q[1] - q[2] * q[2] - q[3] * q[3]) * 180 / PI;
+// }
+// float MPU_GetPitch(void) {
+// 	return -asin(2.0f * (q[1] * q[3] - q[0] * q[2])) * 180 / PI;
+// }
+// float MPU_GetRoll(void) {
+// 	return atan2(2.0f * (q[0] * q[1] + q[2] * q[3]),
+// 			q[0] * q[0] - q[1] * q[1] - q[2] * q[2] + q[3] * q[3]) * 180 / PI;
+// }
+// void MPU_GetAngles(float *data) {
+// 	if (sizeof(data) != 3)
+// 		return;
+// 	data[0] = MPU_GetYaw();
+// 	data[1] = MPU_GetPitch();
+// 	data[2] = MPU_GetRoll();
+// }
 
 float MPU_GetVelocity(void) {
 	int16_t accel_temp[3];
@@ -284,35 +280,35 @@ uint8_t MPU_ReadMagID(void) {
 	return MPU_ReadData(MPU9250_ID_MAGNET, MPU9250_MAG_CONFIG_WIA);
 }
 
-void MPU_UpdateAngles(void) {
-	int16_t accel_raw[3];
-	int16_t gyro_raw[3];
-	int16_t mag_raw[3];
+// void MPU_UpdateAngles(void) {
+// 	int16_t accel_raw[3];
+// 	int16_t gyro_raw[3];
+// 	int16_t mag_raw[3];
 
-	MPU_GetAccel(accel_raw);
-	MPU_GetGyro(gyro_raw);
-	MPU_GetMag(mag_raw);
+// 	MPU_GetAccel(accel_raw);
+// 	MPU_GetGyro(gyro_raw);
+// 	MPU_GetMag(mag_raw);
 
-	float gx = (gyro_raw[0] * PI / 180.0f) / gRes;
-	float gy = (gyro_raw[1] * PI / 180.0f) / gRes;
-	float gz = (gyro_raw[2] * PI / 180.0f) / gRes;
+// 	float gx = (gyro_raw[0] * PI / 180.0f) / gRes;
+// 	float gy = (gyro_raw[1] * PI / 180.0f) / gRes;
+// 	float gz = (gyro_raw[2] * PI / 180.0f) / gRes;
 
-	float ax = accel_raw[0] / aRes * 9.81f;
-	float ay = accel_raw[1] / aRes * 9.81f;
-	float az = accel_raw[2] / aRes * 9.81f;
+// 	float ax = accel_raw[0] / aRes * 9.81f;
+// 	float ay = accel_raw[1] / aRes * 9.81f;
+// 	float az = accel_raw[2] / aRes * 9.81f;
 
-	float mx = mag_raw[0] * x_scale_factor + x_offset;
-	float my = mag_raw[1] * y_scale_factor + y_offset;
-	float mz = mag_raw[2];
+// 	float mx = mag_raw[0] * x_scale_factor + x_offset;
+// 	float my = mag_raw[1] * y_scale_factor + y_offset;
+// 	float mz = mag_raw[2];
 
-	mx *= mRes;
-	my *= mRes;
-	mz *= mRes;
+// 	mx *= mRes;
+// 	my *= mRes;
+// 	mz *= mRes;
 
-	//		MadgwickAHRSupdate(gy, gx, -gz, ay, ax, -az, mx, my, mz, q); // y axis of accel is NORTH
-	MadgwickAHRSupdate(gx, gy, -gz, ax, ay, -az, my, mx, mz); // x axis of accel is NORTH, y is EAST, -z is DOWN
-	MPU_GetVelocity();
-}
+// 	//		MadgwickAHRSupdate(gy, gx, -gz, ay, ax, -az, mx, my, mz, q); // y axis of accel is NORTH
+// 	MadgwickAHRSupdate(gx, gy, -gz, ax, ay, -az, my, mx, mz); // x axis of accel is NORTH, y is EAST, -z is DOWN
+// 	MPU_GetVelocity();
+// }
 
 void MPU_GetAccelOffset(void) {
 //	uint8_t data_address;
