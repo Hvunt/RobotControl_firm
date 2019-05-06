@@ -7,49 +7,9 @@
    CONDITIONS OF ANY KIND, either express or implied.
 */
 
-#include <string.h>
-#include <stdlib.h>
-#include <sys/param.h>
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "freertos/event_groups.h"
-#include "esp_wifi.h"
-#include "esp_wpa2.h"
-#include "esp_event_loop.h"
-#include "esp_log.h"
-#include "esp_system.h"
-#include "nvs_flash.h"
-#include "tcpip_adapter.h"
-#include "esp_smartconfig.h"
-
-#include "lwip/err.h"
-#include "lwip/sockets.h"
-#include "lwip/sys.h"
-#include <lwip/netdb.h>
-
-#include "driver/i2c.h"
-
-#include "motor_defs.h"
+#include "main.h"
 
 #define PORT 80
-
-//I2C Settings
-
-#define I2C_STM32_ADDRESS              0x30
-
-#define I2C_MASTER_SCL_IO          10               /*!< gpio number for I2C master clock */
-#define I2C_MASTER_SDA_IO          9               /*!< gpio number for I2C master data  */
-#define I2C_MASTER_NUM             I2C_NUM_1        /*!< I2C port number for master dev */
-#define I2C_MASTER_TX_BUF_DISABLE  0                /*!< I2C master do not need buffer */
-#define I2C_MASTER_RX_BUF_DISABLE  0                /*!< I2C master do not need buffer */
-#define I2C_MASTER_FREQ_HZ         400000           /*!< I2C master clock frequency */
-
-#define WRITE_BIT                          I2C_MASTER_WRITE /*!< I2C master write */
-#define READ_BIT                           I2C_MASTER_READ  /*!< I2C master read */
-#define ACK_CHECK_EN                       0x1              /*!< I2C master will check ack from slave*/
-#define ACK_CHECK_DIS                      0x0              /*!< I2C master will not check ack from slave */
-#define ACK_VAL                            0x0              /*!< I2C ack value */
-#define NACK_VAL                           0x1              /*!< I2C nack value */
 
 /* FreeRTOS event group to signal when we are connected & ready to make a request */
 static EventGroupHandle_t wifi_event_group;
@@ -66,15 +26,17 @@ const int IPV6_GOTIP_BIT = BIT4;
 
 wifi_config_t *wifi_config;
 
-void smartconfig_example_task(void * parm);
+void smartconfig_example_task(void *parm);
 void tcp_server_task(void *pvParameters);
 
-static void i2c_send(char *data);
-static esp_err_t i2c_master_write_slave(i2c_port_t i2c_num, uint8_t* data_wr, size_t size);
+void i2c_master_init(void);
+// void i2c_send(char *data);
+// static esp_err_t i2c_master_write_slave(i2c_port_t i2c_num, uint8_t* data_wr, size_t size);
 
 static esp_err_t event_handler(void *ctx, system_event_t *event)
 {
-    switch(event->event_id) {
+    switch (event->event_id)
+    {
     case SYSTEM_EVENT_STA_START:
         xTaskCreate(smartconfig_example_task, "smartconfig_example_task", 4096, NULL, 3, NULL);
         break;
@@ -106,64 +68,69 @@ static void initialise_wifi(void)
 {
     tcpip_adapter_init();
     wifi_event_group = xEventGroupCreate();
-    ESP_ERROR_CHECK( esp_event_loop_init(event_handler, NULL) );
+    ESP_ERROR_CHECK(esp_event_loop_init(event_handler, NULL));
 
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
 
-    ESP_ERROR_CHECK( esp_wifi_init(&cfg) );
-    ESP_ERROR_CHECK( esp_wifi_set_mode(WIFI_MODE_STA) );
-    ESP_ERROR_CHECK( esp_wifi_start() );
+    ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
+    ESP_ERROR_CHECK(esp_wifi_start());
 }
 
 static void sc_callback(smartconfig_status_t status, void *pdata)
 {
-    switch (status) {
-        case SC_STATUS_WAIT:
-            ESP_LOGI(TAG, "SC_STATUS_WAIT");
-            break;
-        case SC_STATUS_FIND_CHANNEL:
-            ESP_LOGI(TAG, "SC_STATUS_FINDING_CHANNEL");
-            break;
-        case SC_STATUS_GETTING_SSID_PSWD:
-            ESP_LOGI(TAG, "SC_STATUS_GETTING_SSID_PSWD");
-            break;
-        case SC_STATUS_LINK:
-            ESP_LOGI(TAG, "SC_STATUS_LINK");
-            wifi_config = pdata;
-            ESP_LOGI(TAG, "SSID:%s", wifi_config->sta.ssid);
-            ESP_LOGI(TAG, "PASSWORD:%s", wifi_config->sta.password);
-            ESP_ERROR_CHECK( esp_wifi_disconnect() );
-            ESP_ERROR_CHECK( esp_wifi_set_config(ESP_IF_WIFI_STA, wifi_config) );
-            ESP_ERROR_CHECK( esp_wifi_connect() );
-            break;
-        case SC_STATUS_LINK_OVER:
-            ESP_LOGI(TAG, "SC_STATUS_LINK_OVER");
-            if (pdata != NULL) {
-                uint8_t phone_ip[4] = { 0 };
-                memcpy(phone_ip, (uint8_t* )pdata, 4);
-                ESP_LOGI(TAG, "Phone ip: %d.%d.%d.%d\n", phone_ip[0], phone_ip[1], phone_ip[2], phone_ip[3]);
-            }
-            xEventGroupSetBits(wifi_event_group, ESPTOUCH_DONE_BIT);
-            break;
-        default:
-            break;
+    switch (status)
+    {
+    case SC_STATUS_WAIT:
+        ESP_LOGI(TAG, "SC_STATUS_WAIT");
+        break;
+    case SC_STATUS_FIND_CHANNEL:
+        ESP_LOGI(TAG, "SC_STATUS_FINDING_CHANNEL");
+        break;
+    case SC_STATUS_GETTING_SSID_PSWD:
+        ESP_LOGI(TAG, "SC_STATUS_GETTING_SSID_PSWD");
+        break;
+    case SC_STATUS_LINK:
+        ESP_LOGI(TAG, "SC_STATUS_LINK");
+        wifi_config = pdata;
+        ESP_LOGI(TAG, "SSID:%s", wifi_config->sta.ssid);
+        ESP_LOGI(TAG, "PASSWORD:%s", wifi_config->sta.password);
+        ESP_ERROR_CHECK(esp_wifi_disconnect());
+        ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_STA, wifi_config));
+        ESP_ERROR_CHECK(esp_wifi_connect());
+        break;
+    case SC_STATUS_LINK_OVER:
+        ESP_LOGI(TAG, "SC_STATUS_LINK_OVER");
+        if (pdata != NULL)
+        {
+            uint8_t phone_ip[4] = {0};
+            memcpy(phone_ip, (uint8_t *)pdata, 4);
+            ESP_LOGI(TAG, "Phone ip: %d.%d.%d.%d\n", phone_ip[0], phone_ip[1], phone_ip[2], phone_ip[3]);
+        }
+        xEventGroupSetBits(wifi_event_group, ESPTOUCH_DONE_BIT);
+        break;
+    default:
+        break;
     }
 }
 
-void smartconfig_example_task(void * parm)
+void smartconfig_example_task(void *parm)
 {
     EventBits_t uxBits;
-    ESP_ERROR_CHECK( esp_smartconfig_set_type(SC_TYPE_ESPTOUCH) );
-    ESP_ERROR_CHECK( esp_smartconfig_start(sc_callback) );
-    while (1) {
-        uxBits = xEventGroupWaitBits(wifi_event_group, CONNECTED_BIT | ESPTOUCH_DONE_BIT, true, false, portMAX_DELAY); 
-        if(uxBits & CONNECTED_BIT) {
+    ESP_ERROR_CHECK(esp_smartconfig_set_type(SC_TYPE_ESPTOUCH));
+    ESP_ERROR_CHECK(esp_smartconfig_start(sc_callback));
+    while (1)
+    {
+        uxBits = xEventGroupWaitBits(wifi_event_group, CONNECTED_BIT | ESPTOUCH_DONE_BIT, true, false, portMAX_DELAY);
+        if (uxBits & CONNECTED_BIT)
+        {
             ESP_LOGI(TAG, "WiFi Connected to ap");
         }
-        if(uxBits & ESPTOUCH_DONE_BIT) {
+        if (uxBits & ESPTOUCH_DONE_BIT)
+        {
             ESP_LOGI(TAG, "smartconfig over");
             esp_smartconfig_stop();
-            xTaskCreate(tcp_server_task, "tcp_server_task", 4096, NULL, 5, NULL);
+            xTaskCreate(tcp_server_task, "tcp_server_task", 4096, NULL, 3, NULL);
             vTaskDelete(NULL);
         }
     }
@@ -171,7 +138,7 @@ void smartconfig_example_task(void * parm)
 
 static void wait_for_ip()
 {
-    uint32_t bits = IPV4_GOTIP_BIT | IPV6_GOTIP_BIT ;
+    uint32_t bits = IPV4_GOTIP_BIT | IPV6_GOTIP_BIT;
 
     ESP_LOGI(TAG, "Waiting for AP connection...");
     xEventGroupWaitBits(wifi_event_group, bits, false, true, portMAX_DELAY);
@@ -185,7 +152,8 @@ void tcp_server_task(void *pvParameters)
     int addr_family;
     int ip_protocol;
 
-    while (1) {
+    while (1)
+    {
 
 #define CONFIG_EXAMPLE_IPV4 1
 #ifdef CONFIG_EXAMPLE_IPV4
@@ -207,21 +175,24 @@ void tcp_server_task(void *pvParameters)
 #endif
 
         int listen_sock = socket(addr_family, SOCK_STREAM, ip_protocol);
-        if (listen_sock < 0) {
+        if (listen_sock < 0)
+        {
             ESP_LOGE(TAG, "Unable to create socket: errno %d", errno);
             break;
         }
         ESP_LOGI(TAG, "Socket created");
 
         int err = bind(listen_sock, (struct sockaddr *)&destAddr, sizeof(destAddr));
-        if (err != 0) {
+        if (err != 0)
+        {
             ESP_LOGE(TAG, "Socket unable to bind: errno %d", errno);
             break;
         }
         ESP_LOGI(TAG, "Socket binded");
 
         err = listen(listen_sock, 1);
-        if (err != 0) {
+        if (err != 0)
+        {
             ESP_LOGE(TAG, "Error occured during listen: errno %d", errno);
             break;
         }
@@ -230,30 +201,38 @@ void tcp_server_task(void *pvParameters)
         struct sockaddr_in6 sourceAddr; // Large enough for both IPv4 or IPv6
         uint addrLen = sizeof(sourceAddr);
         int sock = accept(listen_sock, (struct sockaddr *)&sourceAddr, &addrLen);
-        if (sock < 0) {
+        if (sock < 0)
+        {
             ESP_LOGE(TAG, "Unable to accept connection: errno %d", errno);
             break;
         }
         ESP_LOGI(TAG, "Socket accepted");
 
-        while (1) {
+        while (1)
+        {
             int len = recv(sock, rx_buffer, sizeof(rx_buffer) - 1, 0);
             // Error occured during receiving
-            if (len < 0) {
+            if (len < 0)
+            {
                 ESP_LOGE(TAG, "recv failed: errno %d", errno);
                 break;
             }
             // Connection closed
-            else if (len == 0) {
+            else if (len == 0)
+            {
                 ESP_LOGI(TAG, "Connection closed");
                 break;
             }
             // Data received
-            else {
+            else
+            {
                 // Get the sender's ip address as string
-                if (sourceAddr.sin6_family == PF_INET) {
+                if (sourceAddr.sin6_family == PF_INET)
+                {
                     inet_ntoa_r(((struct sockaddr_in *)&sourceAddr)->sin_addr.s_addr, addr_str, sizeof(addr_str) - 1);
-                } else if (sourceAddr.sin6_family == PF_INET6) {
+                }
+                else if (sourceAddr.sin6_family == PF_INET6)
+                {
                     inet6_ntoa_r(sourceAddr.sin6_addr, addr_str, sizeof(addr_str) - 1);
                 }
 
@@ -263,21 +242,23 @@ void tcp_server_task(void *pvParameters)
 
                 // i2c_send(rx_buffer);
                 int err = send(sock, rx_buffer, len, 0);
-                if (err < 0) {
+                if (err < 0)
+                {
                     ESP_LOGE(TAG, "Error occured during sending: errno %d", errno);
                     break;
                 }
             }
         }
 
-        if (sock != -1) {
+        if (sock != -1)
+        {
             ESP_LOGE(TAG, "Shutting down socket and restarting...");
-            close(listen_sock);
-            vTaskDelay(1);
             shutdown(sock, 0);
-            vTaskDelay(1);
+            vTaskDelay(100);
+            close(listen_sock);
+            vTaskDelay(100);
             close(sock);
-            vTaskDelay(1);
+            vTaskDelay(100);
         }
     }
     vTaskDelete(NULL);
@@ -286,30 +267,33 @@ void tcp_server_task(void *pvParameters)
 /**
  * @brief i2c sender function
  */
-static esp_err_t i2c_master_write_slave(i2c_port_t i2c_num, uint8_t* data_wr, size_t size)
-{
-    i2c_cmd_handle_t cmd = i2c_cmd_link_create();
-    i2c_master_start(cmd);
-    i2c_master_write_byte(cmd, ( I2C_STM32_ADDRESS << 1 ) | WRITE_BIT, ACK_CHECK_EN);
-    i2c_master_write(cmd, data_wr, size, ACK_CHECK_EN);
-    i2c_master_stop(cmd);
-    esp_err_t ret = i2c_master_cmd_begin(i2c_num, cmd, 1000 / portTICK_RATE_MS);
-    i2c_cmd_link_delete(cmd);
-    return ret;
-}
+// static esp_err_t i2c_master_write_slave(i2c_port_t i2c_num, uint8_t* data_wr, size_t size)
+// {
+//     i2c_cmd_handle_t cmd = i2c_cmd_link_create();
+//     i2c_master_start(cmd);
+//     i2c_master_write_byte(cmd, ( I2C_STM32_ADDRESS << 1 ) | WRITE_BIT, ACK_CHECK_EN);
+//     i2c_master_write(cmd, data_wr, size, ACK_CHECK_EN);
+//     i2c_master_stop(cmd);
+//     esp_err_t ret = i2c_master_cmd_begin(i2c_num, cmd, 1000 / portTICK_RATE_MS);
+//     i2c_cmd_link_delete(cmd);
+//     return ret;
+// }
 
 /**
  * @brief i2c master initialization
  */
-static void i2c_master_init()
+void i2c_master_init(void)
 {
+    // for (uint8_t i = 0; i < 255; i++ ){
+    //     ESP_LOGI(TAG, "YOBANNIY ESP32");
+    // }
     int i2c_master_port = I2C_MASTER_NUM;
     i2c_config_t conf;
     conf.mode = I2C_MODE_MASTER;
     conf.sda_io_num = I2C_MASTER_SDA_IO;
-    conf.sda_pullup_en = GPIO_PULLUP_DISABLE;
+    conf.sda_pullup_en = GPIO_PULLUP_ENABLE;
     conf.scl_io_num = I2C_MASTER_SCL_IO;
-    conf.scl_pullup_en = GPIO_PULLUP_DISABLE;
+    conf.scl_pullup_en = GPIO_PULLUP_ENABLE;
     conf.master.clk_speed = I2C_MASTER_FREQ_HZ;
     i2c_param_config(i2c_master_port, &conf);
     i2c_driver_install(i2c_master_port, conf.mode,
@@ -317,35 +301,35 @@ static void i2c_master_init()
                        I2C_MASTER_TX_BUF_DISABLE, 0);
 }
 
-static void i2c_send(char *data)
-{
-    int ret;
-    uint8_t data_buffer[2];
-    if (strcmp(data,MOTORS_FORWARD) == 0){
-        data_buffer[0] = COMM_MOVE;
-        data_buffer[1] = MOVE_FORWARD;
-    } else if (strcmp(data,MOTORS_REVERSE) == 0)
-    {
-        data_buffer[0] = COMM_MOVE;
-        data_buffer[1] = MOVE_REVERSE;
-    } else if (strcmp(data,MOTORS_LEFT) == 0)
-    {
-        data_buffer[0] = COMM_MOVE;
-        data_buffer[1] = MOVE_LEFT;
-    } else if (strcmp(data,MOTORS_RIGHT) == 0)
-    {
-        data_buffer[0] = COMM_MOVE;
-        data_buffer[1] = MOVE_RIGHT;
-    } else if (strcmp(data,MOTORS_STOP) == 0)
-    {
-        data_buffer[0] = COMM_MOVE;
-        data_buffer[1] = MOVE_STOP;
-    }
+// static void i2c_send(char *data)
+// {
+//     int ret;
+//     uint8_t data_buffer[2];
+//     if (strcmp(data,MOTORS_FORWARD) == 0){
+//         data_buffer[0] = COMM_MOVE;
+//         data_buffer[1] = MOVE_FORWARD;
+//     } else if (strcmp(data,MOTORS_REVERSE) == 0)
+//     {
+//         data_buffer[0] = COMM_MOVE;
+//         data_buffer[1] = MOVE_REVERSE;
+//     } else if (strcmp(data,MOTORS_LEFT) == 0)
+//     {
+//         data_buffer[0] = COMM_MOVE;
+//         data_buffer[1] = MOVE_LEFT;
+//     } else if (strcmp(data,MOTORS_RIGHT) == 0)
+//     {
+//         data_buffer[0] = COMM_MOVE;
+//         data_buffer[1] = MOVE_RIGHT;
+//     } else if (strcmp(data,MOTORS_STOP) == 0)
+//     {
+//         data_buffer[0] = COMM_MOVE;
+//         data_buffer[1] = MOVE_STOP;
+//     }
 
-    ret = i2c_master_write_slave(I2C_MASTER_NUM, data_buffer, sizeof(data_buffer));
-    if (ret == ESP_ERR_TIMEOUT)
-        printf("i2c timeout\n");
-}
+//     ret = i2c_master_write_slave(I2C_MASTER_NUM, data_buffer, sizeof(data_buffer));
+//     if (ret == ESP_ERR_TIMEOUT)
+//         printf("i2c timeout\n");
+// }
 // /**
 //  * @brief i2c test task
 //  */
@@ -361,17 +345,36 @@ static void i2c_send(char *data)
 //             printf("i2c timeout\n");
 //         printf("returned code: %d\n", ret);
 //         vTaskDelay(500);
-//     } 
+//     }
 // }
+
+void show_angles_task(void *params)
+{
+    vTaskDelay(2000);
+    while (1)
+    {
+        ESP_LOGI(TAG, "Yaw %f", EC_getYaw());
+        ESP_LOGI(TAG, "Pitch %f", EC_getPitch());
+        ESP_LOGI(TAG, "Roll %f", EC_getRoll());
+        vTaskDelay(100);
+    }
+}
 
 void app_main()
 {
-    ESP_ERROR_CHECK( nvs_flash_init() );
+    esp_err_t err = nvs_flash_init();
+    if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND)
+    {
+        // OTA app partition table has a smaller NVS partition size than the non-OTA
+        // partition table. This size mismatch may cause NVS initialization to fail.
+        // If this happens, we erase NVS partition and initialize NVS again.
+        ESP_ERROR_CHECK(nvs_flash_erase());
+        err = nvs_flash_init();
+    }
+    ESP_ERROR_CHECK(err);
     initialise_wifi();
     i2c_master_init();
-    // xTaskCreate(i2c_task, "i2c_master_sender_task", 2048, NULL, 10, NULL);
-    // ESP_LOGI(TAG, "tcp_server creater");
-    // xTaskCreate(hello_world_task, "hello_world_task", 1024, NULL, 6, NULL);
+    xTaskCreate(EC_ecTask, "EC_ecTask", 8192, NULL, 6, NULL);
+    xTaskCreate(show_angles_task, "show_angles_task", 2048, NULL, 6, NULL);
     wait_for_ip();
 }
-
