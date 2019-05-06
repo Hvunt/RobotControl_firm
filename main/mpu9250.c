@@ -9,27 +9,25 @@
 #include "mpu9250.h"
 
 //========Static function definitions=====
-static esp_err_t i2c_master_write_slave(i2c_port_t i2c_num, uint8_t address, uint8_t *data_wr, size_t size);
-static esp_err_t i2c_example_master_read_slave(i2c_port_t i2c_num, uint8_t address, uint8_t* data_rd, size_t size);
+static esp_err_t i2c_master_write_slave(i2c_port_t i2c_num, uint8_t address, uint8_t *data_wr, uint8_t size);
+static esp_err_t i2c_master_read_slave(i2c_port_t i2c_num, uint8_t address, uint8_t *data_rd, uint8_t size);
 
 //===Private constant and other data===
 
-#define sampleFreq 10.0f
 //static float const alpha = 0.95;
 //static float const rad2deg = 180 / PI;
 //static float const deg2rad = PI / 180;
-float dT = 0;
 //static float const aRes = 2.0f / 32768.0f, gRes = 250.0f / 32768.0f, mRes = 10
 //		* 4912.0f / 32760.0f;   // scale resolutions per LSB for the sensors
 static float const aRes = 16384.f, gRes = 131, mRes = 0.6f; // scale resolutions per LSB for the sensors
 static float magCalFactory[3] = {0.0f, 0.0f, 0.0f};
 static float x_scale_factor = 0.0f, y_scale_factor = 0.0f;
 static float x_offset = 0.0f, y_offset = 0.0f;
-float velocity_vectors[3];
-float accel_offset[3];
+// float velocity_vectors[3];
+// float accel_offset[3];
 //=============================
 
-static esp_err_t i2c_master_write_slave(i2c_port_t i2c_num, uint8_t address, uint8_t *data_wr, size_t size)
+static esp_err_t i2c_master_write_slave(i2c_port_t i2c_num, uint8_t address, uint8_t *data_wr, uint8_t size)
 {
 	i2c_cmd_handle_t cmd = i2c_cmd_link_create();
 	i2c_master_start(cmd);
@@ -41,7 +39,7 @@ static esp_err_t i2c_master_write_slave(i2c_port_t i2c_num, uint8_t address, uin
 	return ret;
 }
 
-static esp_err_t i2c_example_master_read_slave(i2c_port_t i2c_num, uint8_t address, uint8_t* data_rd, size_t size)
+static esp_err_t i2c_master_read_slave(i2c_port_t i2c_num, uint8_t address, uint8_t *data_rd, uint8_t size)
 {
     if (size == 0) {
         return ESP_OK;
@@ -63,16 +61,11 @@ static esp_err_t i2c_example_master_read_slave(i2c_port_t i2c_num, uint8_t addre
  * Addr - target device address
  * Reg - internal memory address
  */
-uint8_t MPU_ReadData(uint16_t Addr, uint8_t Reg)
+uint8_t MPU_ReadData(uint8_t Addr, uint8_t Reg)
 {
 	uint8_t value = 0;
-	// 	uint8_t status = HAL_I2C_Mem_Read(hi2cP, Addr << 1, (uint16_t) Reg,
-	// 	I2C_MEMADD_SIZE_8BIT, &value, 1, 10);
-	// 	if (status == HAL_BUSY) {
-	// //		I2C_ClearBusyFlag(hi2cP);
-	// 		value = MPU_ReadData(Addr, Reg);
-	// 	}
-
+	i2c_master_write_slave(I2C_MASTER_NUM, Addr, &Reg, 1);
+	i2c_master_read_slave(I2C_MASTER_NUM, Addr, &value, 1);
 	return value;
 }
 
@@ -81,14 +74,10 @@ uint8_t MPU_ReadData(uint16_t Addr, uint8_t Reg)
  * Reg - internal memory address
  * Value - value for write into device
  */
-void MPU_WriteData(uint16_t Addr, uint8_t Reg, uint8_t Value)
+void MPU_WriteData(uint8_t Addr, uint8_t Reg, uint8_t Value)
 {
-	// 	uint8_t status = HAL_I2C_Mem_Write(hi2cP, Addr << 1, (uint16_t) Reg,
-	// 	I2C_MEMADD_SIZE_8BIT, &Value, 1, 10);
-	// 	if (status == HAL_BUSY) {
-	// //		I2C_ClearBusyFlag(hi2cP);
-	// 		MPU_WriteData(Addr, Reg, Value);
-	// 	}
+	uint8_t data[] = {Reg, Value};
+	i2c_master_write_slave(I2C_MASTER_NUM, Addr, data, 2);
 }
 
 /*---GET ACCEL DATA---*/
@@ -118,9 +107,8 @@ void MPU_GetAccel(int16_t *data)
 	uint8_t data_address = MPU9250_ACCEL_XOUT_H;
 	uint8_t buffer[6] = {0};
 
-	// HAL_I2C_Master_Transmit(hi2cP, MPU9250_ID_ACCELGYR << 1, &data_address, 1,
-	// 		100);
-	// HAL_I2C_Master_Receive(hi2cP, MPU9250_ID_ACCELGYR << 1, buffer, 6, 100);
+	i2c_master_write_slave(I2C_MASTER_NUM, MPU9250_ID_ACCELGYR, &data_address, 1);
+	i2c_master_read_slave(I2C_MASTER_NUM, MPU9250_ID_ACCELGYR, buffer, 6);
 
 	data[0] = ((buffer[0] << 8) | buffer[1]);
 	data[1] = ((buffer[2] << 8) | buffer[3]);
@@ -154,9 +142,8 @@ void MPU_GetGyro(int16_t *data)
 	uint8_t data_address = MPU9250_GYRO_XOUT_H;
 	uint8_t buffer[6] = {0};
 
-	// HAL_I2C_Master_Transmit(hi2cP, MPU9250_ID_ACCELGYR << 1, &data_address, 1,
-	// 		100);
-	// HAL_I2C_Master_Receive(hi2cP, MPU9250_ID_ACCELGYR << 1, buffer, 6, 100);
+	i2c_master_write_slave(I2C_MASTER_NUM, MPU9250_ID_ACCELGYR, &data_address, 1);
+	i2c_master_read_slave(I2C_MASTER_NUM, MPU9250_ID_ACCELGYR, buffer, 6);
 
 	data[0] = ((buffer[0] << 8) | buffer[1]);
 	data[1] = ((buffer[2] << 8) | buffer[3]);
@@ -192,21 +179,20 @@ void MPU_GetMag(int16_t *data)
 	uint8_t buffer[6];
 
 	MPU_WriteData(MPU9250_ID_MAGNET, MPU9250_MAG_CONFIG_CNTL, 0x00);
-	// HAL_Delay(2);
+	vTaskDelay(2);
 	MPU_WriteData(MPU9250_ID_MAGNET, MPU9250_MAG_CONFIG_CNTL, 0x11);
-	// HAL_Delay(2);
+	vTaskDelay(5);
 
 	uint8_t status = 0;
-	//	status = MPU_ReadData(MPU9250_ID_ACCELGYR, 0x75);
 	while (!status)
 	{
 		status = MPU_ReadData(MPU9250_ID_MAGNET, MPU9250_MAG_CONFIG_ST1) & 0x01;
 	}
 	if (status)
 	{
-		// status = HAL_I2C_Mem_Read(hi2cP, MPU9250_ID_MAGNET << 1,
-		// MPU9250_MAG_XOUT_L,
-		// I2C_MEMADD_SIZE_8BIT, buffer, 6, 100);
+		uint8_t reg = MPU9250_MAG_XOUT_L;
+		i2c_master_write_slave(I2C_MASTER_NUM, MPU9250_ID_MAGNET, &reg, 1);
+		i2c_master_read_slave(I2C_MASTER_NUM, MPU9250_ID_MAGNET, buffer, 6);
 
 		data[0] = ((buffer[1] << 8) | buffer[0]);
 		data[1] = ((buffer[3] << 8) | buffer[2]);
@@ -214,14 +200,6 @@ void MPU_GetMag(int16_t *data)
 	}
 
 	MPU_WriteData(MPU9250_ID_MAGNET, MPU9250_MAG_CONFIG_CNTL, 0x00);
-	// HAL_Delay(1);
-	// 	if (status == HAL_BUSY) {
-	// //		I2C_ClearBusyFlag(hi2cP);
-	// 		MPU_GetMag(data);
-	// 	}
-	// 	if (status == HAL_ERROR) {
-	// 		MPU_GetMag(data);
-	// 	}
 }
 
 /*---GET TEMP DATA---*/
@@ -233,41 +211,21 @@ int16_t MPU_GetTemp(void)
 	return rawData;
 }
 
-/*---GET YAW, PITCH, ROLL, VELOCITY---*/
-// float MPU_GetYaw(void) {
-// 	return atan2(2.0f * (q[1] * q[2] + q[0] * q[3]),
-// 			q[0] * q[0] + q[1] * q[1] - q[2] * q[2] - q[3] * q[3]) * 180 / PI;
-// }
-// float MPU_GetPitch(void) {
-// 	return -asin(2.0f * (q[1] * q[3] - q[0] * q[2])) * 180 / PI;
-// }
-// float MPU_GetRoll(void) {
-// 	return atan2(2.0f * (q[0] * q[1] + q[2] * q[3]),
-// 			q[0] * q[0] - q[1] * q[1] - q[2] * q[2] + q[3] * q[3]) * 180 / PI;
-// }
-// void MPU_GetAngles(float *data) {
-// 	if (sizeof(data) != 3)
-// 		return;
-// 	data[0] = MPU_GetYaw();
-// 	data[1] = MPU_GetPitch();
-// 	data[2] = MPU_GetRoll();
-// }
+// float MPU_GetVelocity(void)
+// {
+// 	int16_t accel_temp[3];
+// 	float accel[3];
+// 	dT = 0.007f;
 
-float MPU_GetVelocity(void)
-{
-	int16_t accel_temp[3];
-	float accel[3];
-	dT = 0.007f;
-
-	MPU_GetAccel(accel_temp);
-	//	velocity_vectors[2] = 0;
-	for (uint8_t i = 0; i < 3; i++)
-	{
-		accel[i] = accel_temp[i] / aRes - accel_offset[i];
-		velocity_vectors[i] = accel[i] * dT;
-	}
-	return sqrt(velocity_vectors[0] * velocity_vectors[0] + velocity_vectors[1] * velocity_vectors[1] + velocity_vectors[2] * velocity_vectors[2]);
-}
+// 	MPU_GetAccel(accel_temp);
+// 	//	velocity_vectors[2] = 0;
+// 	for (uint8_t i = 0; i < 3; i++)
+// 	{
+// 		accel[i] = accel_temp[i] / aRes - accel_offset[i];
+// 		velocity_vectors[i] = accel[i] * dT;
+// 	}
+// 	return sqrt(velocity_vectors[0] * velocity_vectors[0] + velocity_vectors[1] * velocity_vectors[1] + velocity_vectors[2] * velocity_vectors[2]);
+// }
 
 /*--UTILITY FUNCTION--*/
 
@@ -326,37 +284,7 @@ uint8_t MPU_ReadMagID(void)
 	return MPU_ReadData(MPU9250_ID_MAGNET, MPU9250_MAG_CONFIG_WIA);
 }
 
-// void MPU_UpdateAngles(void) {
-// 	int16_t accel_raw[3];
-// 	int16_t gyro_raw[3];
-// 	int16_t mag_raw[3];
-
-// 	MPU_GetAccel(accel_raw);
-// 	MPU_GetGyro(gyro_raw);
-// 	MPU_GetMag(mag_raw);
-
-// 	float gx = (gyro_raw[0] * PI / 180.0f) / gRes;
-// 	float gy = (gyro_raw[1] * PI / 180.0f) / gRes;
-// 	float gz = (gyro_raw[2] * PI / 180.0f) / gRes;
-
-// 	float ax = accel_raw[0] / aRes * 9.81f;
-// 	float ay = accel_raw[1] / aRes * 9.81f;
-// 	float az = accel_raw[2] / aRes * 9.81f;
-
-// 	float mx = mag_raw[0] * x_scale_factor + x_offset;
-// 	float my = mag_raw[1] * y_scale_factor + y_offset;
-// 	float mz = mag_raw[2];
-
-// 	mx *= mRes;
-// 	my *= mRes;
-// 	mz *= mRes;
-
-// 	//		MadgwickAHRSupdate(gy, gx, -gz, ay, ax, -az, mx, my, mz, q); // y axis of accel is NORTH
-// 	MadgwickAHRSupdate(gx, gy, -gz, ax, ay, -az, my, mx, mz); // x axis of accel is NORTH, y is EAST, -z is DOWN
-// 	MPU_GetVelocity();
-// }
-
-void MPU_GetAccelOffset(void)
+void MPU_GetAccelOffset(float * accel_offset)
 {
 	//	uint8_t data_address;
 	//	uint8_t buffer[6];
@@ -494,16 +422,11 @@ void MPU_CalibrateMag(void)
 	//	HAL_GPIO_WritePin(LED_PIN_GPIO_Port, LED_PIN_Pin, RESET);
 }
 
-void MPU_Init(/*I2C_HandleTypeDef * hi2c*/)
+void MPU_Init(void)
 {
-	// hi2cP = hi2c;
 	MPU_WakeUp();
-	// HAL_Delay(10);
+	vTaskDelay(10);
 	MPU_WriteData(MPU9250_ID_ACCELGYR, 0x37, 0x02); //enable magnetometer
-
-	MPU_CalibrateMag();
-	MPU_GetAccelOffset();
-	// dT = HAL_GetTick() / 1000;
 }
 
 void MPU_Error_handler(void)

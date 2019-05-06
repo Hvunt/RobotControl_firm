@@ -15,13 +15,15 @@ extern "C" {
 #include "driver/i2c.h"
 #include "configs.h"
 #include <math.h>
+#include "esp_log.h"
+#include "esp_err.h"
 
 /*------===REGISTER MAP===------*/
 
 /*----------ID------------*/
 #define MPU9250_ID_ACCELGYR 	0x68		//ID for Accel and Gyro
 #define MPU9250_ID_MAGNET 		0x0C
-#define MPU9250_ID_ADDR 		0x71
+#define MPU9250_ID_ADDR 		0x75
 
 /*-------SELF TEST--------*/
 #define MPU9250_SELF_TEST_X 	((uint8_t)0x0D)
@@ -94,8 +96,8 @@ enum MPU_AccelScales {
 	MPU_ACCEL_SCALE_16g
 };
 
-uint8_t MPU_ReadData(uint16_t Addr, uint8_t Reg);
-void MPU_WriteData(uint16_t Addr, uint8_t Reg, uint8_t Value);
+uint8_t MPU_ReadData(uint8_t Addr, uint8_t Reg);
+void MPU_WriteData(uint8_t Addr, uint8_t Reg, uint8_t Value);
 
 int16_t MPU_GetAccel_X(void);
 int16_t MPU_GetAccel_Y(void);
@@ -126,7 +128,7 @@ void MPU_FallAsleep(void);
 
 uint8_t MPU_ReadAccelGyroID(void);
 uint8_t MPU_ReadMagID(void);
-void MPU_GetAccelOffset(void);
+void MPU_GetAccelOffset(float * accel_offset);
 void MPU_CalibrateMag(void);
 void MPU_Init(/*I2C_HandleTypeDef * hi2c*/);
 void MPU_Error_handler(void);
