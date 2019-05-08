@@ -1,6 +1,8 @@
 
 #include "status_led.h"
 
+static const char *TAG_SL = "SL";
+
 ledc_timer_config_t ledc_timer;
 ledc_channel_config_t ledc_channel;
 
@@ -36,28 +38,29 @@ void SL_task(void *params)
         switch (state)
         {
         case SL_INIT:
-            ledc_set_fade_with_time(ledc_channel.speed_mode,
-                                    ledc_channel.channel, 1023, 10);
-            ledc_fade_start(ledc_channel.speed_mode,
-                            ledc_channel.channel, LEDC_FADE_NO_WAIT);
+            ledc_set_fade_step_and_start(ledc_channel.speed_mode,
+                                         ledc_channel.channel, 1, 512, 100, LEDC_FADE_NO_WAIT);
+            ledc_set_fade_step_and_start(ledc_channel.speed_mode,
+                                         ledc_channel.channel, 1023, 512, 100, LEDC_FADE_NO_WAIT);
             vTaskDelay(1);
+            break;
+        case SL_WAIT_FOR_CONNECTION_TO_DEVICE:
+            ledc_set_fade_step_and_start(ledc_channel.speed_mode,
+                                         ledc_channel.channel, 1, 512, 100, LEDC_FADE_NO_WAIT);
+            ledc_set_fade_step_and_start(ledc_channel.speed_mode,
+                                         ledc_channel.channel, 1023, 512, 25, LEDC_FADE_NO_WAIT);
             break;
         case SL_NORMAL_MODE:
-            ledc_set_fade_with_time(ledc_channel.speed_mode,
-                                    ledc_channel.channel, 1023, 1000);
-            ledc_fade_start(ledc_channel.speed_mode,
-                            ledc_channel.channel, LEDC_FADE_WAIT_DONE);
+            ledc_set_fade_time_and_start(ledc_channel.speed_mode,
+                                         ledc_channel.channel, 1023, 2000, LEDC_FADE_NO_WAIT);
+            ledc_set_fade_time_and_start(ledc_channel.speed_mode,
+                                         ledc_channel.channel, 1, 2000, LEDC_FADE_NO_WAIT);
             vTaskDelay(1);
-            break;
             break;
         case SL_ERROR:
         default:
             break;
         }
-        ledc_set_fade_with_time(ledc_channel.speed_mode,
-                                ledc_channel.channel, 0, 1000);
-        ledc_fade_start(ledc_channel.speed_mode,
-                        ledc_channel.channel, LEDC_FADE_WAIT_DONE);
         vTaskDelay(1);
     }
 }

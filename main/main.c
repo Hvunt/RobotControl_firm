@@ -131,6 +131,7 @@ void smartconfig_example_task(void *parm)
             ESP_LOGI(TAG, "smartconfig over");
             esp_smartconfig_stop();
             xTaskCreate(tcp_server_task, "tcp_server_task", 4096, NULL, 3, NULL);
+            SL_setState(SL_WAIT_FOR_CONNECTION_TO_DEVICE);
             vTaskDelete(NULL);
         }
     }
@@ -195,7 +196,7 @@ void tcp_server_task(void *pvParameters)
             break;
         }
         ESP_LOGI(TAG, "Socket accepted");
-
+        SL_setState(SL_NORMAL_MODE);
         while (1)
         {
             int len = recv(sock, rx_buffer, sizeof(rx_buffer) - 1, 0);
@@ -247,6 +248,7 @@ void tcp_server_task(void *pvParameters)
             vTaskDelay(100);
             close(sock);
             vTaskDelay(100);
+            SL_setState(SL_WAIT_FOR_CONNECTION_TO_DEVICE);
         }
     }
     vTaskDelete(NULL);
@@ -348,7 +350,7 @@ void app_main()
     initialise_wifi();
     i2c_master_init();
 
-    xTaskCreate(EC_ecTask, "EC_ecTask", 8192, NULL, 6, NULL);
-    xTaskCreate(show_angles_task, "show_angles_task", 2048, NULL, 6, NULL);
+    // xTaskCreate(EC_ecTask, "EC_ecTask", 8192, NULL, 6, NULL);
+    // xTaskCreate(show_angles_task, "show_angles_task", 2048, NULL, 6, NULL);
     wait_for_ip();
 }
