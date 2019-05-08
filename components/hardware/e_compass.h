@@ -1,5 +1,4 @@
 
-
 #include "mpu9250.h"
 #include "MadgwickAHRS.h"
 

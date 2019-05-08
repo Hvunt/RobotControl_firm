@@ -19,7 +19,7 @@ static EventGroupHandle_t wifi_event_group;
    to the AP with an IP? */
 static const int CONNECTED_BIT = BIT0;
 static const int ESPTOUCH_DONE_BIT = BIT1;
-static const char *TAG = "sc";
+static const char *TAG = "RC";
 
 const int IPV4_GOTIP_BIT = BIT3;
 const int IPV6_GOTIP_BIT = BIT4;
@@ -154,9 +154,6 @@ void tcp_server_task(void *pvParameters)
 
     while (1)
     {
-
-#define CONFIG_EXAMPLE_IPV4 1
-#ifdef CONFIG_EXAMPLE_IPV4
         struct sockaddr_in destAddr;
         destAddr.sin_addr.s_addr = htonl(INADDR_ANY);
         destAddr.sin_family = AF_INET;
@@ -164,15 +161,6 @@ void tcp_server_task(void *pvParameters)
         addr_family = AF_INET;
         ip_protocol = IPPROTO_IP;
         inet_ntoa_r(destAddr.sin_addr, addr_str, sizeof(addr_str) - 1);
-#else // IPV6
-        struct sockaddr_in6 destAddr;
-        bzero(&destAddr.sin6_addr.un, sizeof(destAddr.sin6_addr.un));
-        destAddr.sin6_family = AF_INET6;
-        destAddr.sin6_port = htons(PORT);
-        addr_family = AF_INET6;
-        ip_protocol = IPPROTO_IPV6;
-        inet6_ntoa_r(destAddr.sin6_addr, addr_str, sizeof(addr_str) - 1);
-#endif
 
         int listen_sock = socket(addr_family, SOCK_STREAM, ip_protocol);
         if (listen_sock < 0)
@@ -284,9 +272,6 @@ void tcp_server_task(void *pvParameters)
  */
 void i2c_master_init(void)
 {
-    // for (uint8_t i = 0; i < 255; i++ ){
-    //     ESP_LOGI(TAG, "YOBANNIY ESP32");
-    // }
     int i2c_master_port = I2C_MASTER_NUM;
     i2c_config_t conf;
     conf.mode = I2C_MODE_MASTER;
@@ -329,23 +314,6 @@ void i2c_master_init(void)
 //     ret = i2c_master_write_slave(I2C_MASTER_NUM, data_buffer, sizeof(data_buffer));
 //     if (ret == ESP_ERR_TIMEOUT)
 //         printf("i2c timeout\n");
-// }
-// /**
-//  * @brief i2c test task
-//  */
-// static void i2c_task(void *arg)
-// {
-//     int ret;
-//     int message_counter = 0;
-//     uint8_t data_buffer[2] = { 1, 0x20};
-//     while(1){
-//         printf("message number: %d\n", message_counter++);
-//         ret = i2c_example_master_write_slave(I2C_EXAMPLE_MASTER_NUM, data_buffer, sizeof(data_buffer));
-//         if (ret == ESP_ERR_TIMEOUT)
-//             printf("i2c timeout\n");
-//         printf("returned code: %d\n", ret);
-//         vTaskDelay(500);
-//     }
 // }
 
 void show_angles_task(void *params)
