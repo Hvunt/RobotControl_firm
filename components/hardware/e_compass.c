@@ -31,6 +31,7 @@ void EC_ecTask(void *data)
     /*getting calibrated data etc.*/
     MPU_Init();
     vTaskDelay(10);
+    
     while (1)
     {
 
@@ -38,9 +39,13 @@ void EC_ecTask(void *data)
         int16_t gyro_raw[3];
         int16_t mag_raw[3];
 
-        MPU_GetAccel(accel_raw);
-        MPU_GetGyro(gyro_raw);
-        MPU_GetMag(mag_raw);
+        // MPU_GetAccel(accel_raw);
+        // ESP_LOGI(EC_TAG, "I AM HERE");
+        // MPU_GetGyro(gyro_raw);
+        // ESP_LOGI(EC_TAG, "AND NOW HERE");
+        // MPU_GetMag(mag_raw);
+        // ESP_LOGI(EC_TAG, "AAAND HERE");
+        
 
         float ax = accel_raw[0] / aRes * 9.81f;
         float ay = accel_raw[1] / aRes * 9.81f;
@@ -58,8 +63,8 @@ void EC_ecTask(void *data)
         my *= mRes;
         mz *= mRes;
 
-        // ESP_LOGI(EC_TAG, "MPU ID %d", MPU_ReadAccelGyroID());
-        // ESP_LOGI(EC_TAG, "MPU magnetometer ID %d", MPU_ReadMagID());
+        ESP_LOGI(EC_TAG, "MPU ID %d", MPU_ReadAccelGyroID());
+        ESP_LOGI(EC_TAG, "MPU magnetometer ID %d", MPU_ReadMagID());
         // ESP_LOGI(EC_TAG, "Accel x y z %f %f %f", ax, ay, az);
         // ESP_LOGI(EC_TAG, "Gyro x y z %f %f %f", gx, gy, gz );
         // ESP_LOGI(EC_TAG, "Mag x y z %f %f %f", mx, my, mz);
@@ -78,6 +83,6 @@ void EC_ecTask(void *data)
 
         // // x axis of accel is NORTH, y is EAST, -z is DOWN
         // MadgwickAHRSupdate(gx, gy, -gz, ax, ay, -az, my, mx, mz); 
-        // vTaskDelay(10);
+        vTaskDelay(1000);
     }
 }

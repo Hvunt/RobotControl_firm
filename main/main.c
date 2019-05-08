@@ -345,12 +345,12 @@ void app_main()
     
     SL_init();
     SL_setState(SL_INIT);
-    xTaskCreate(SL_task, "SL_task", 2048, NULL, 5, NULL);
+    xTaskCreate(SL_task, "SL_task", 2048, NULL, 3, NULL);
 
     initialise_wifi();
     i2c_master_init();
 
-    xTaskCreate(EC_ecTask, "EC_ecTask", 8192, NULL, 6, NULL);
-    xTaskCreate(show_angles_task, "show_angles_task", 2048, NULL, 6, NULL);
+    xTaskCreate(EC_ecTask, "EC_ecTask", 8192, NULL, 7, NULL);
+    // xTaskCreate(show_angles_task, "show_angles_task", 2048, NULL, 6, NULL);
     wait_for_ip();
 }
