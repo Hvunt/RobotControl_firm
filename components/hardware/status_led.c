@@ -59,6 +59,8 @@ void SL_task(void *params)
             break;
         case SL_ERROR:
         default:
+            ledc_set_fade_time_and_start(ledc_channel.speed_mode,
+                                         ledc_channel.channel, 1, 1, LEDC_FADE_NO_WAIT);
             break;
         }
         vTaskDelay(1);
