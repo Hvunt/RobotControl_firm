@@ -26,7 +26,7 @@ const int IPV6_GOTIP_BIT = BIT4;
 
 wifi_config_t *wifi_config;
 
-void smartconfig_example_task(void *parm);
+void smartconfig_task(void *parm);
 void tcp_server_task(void *pvParameters);
 
 void i2c_master_init(void);
@@ -38,7 +38,7 @@ static esp_err_t event_handler(void *ctx, system_event_t *event)
     switch (event->event_id)
     {
     case SYSTEM_EVENT_STA_START:
-        xTaskCreate(smartconfig_example_task, "smartconfig_example_task", 4096, NULL, 3, NULL);
+        xTaskCreate(smartconfig_task, "smartconfig_task", 4096, NULL, 3, NULL);
         break;
     case SYSTEM_EVENT_STA_CONNECTED:
         /* enable ipv6 */
@@ -114,7 +114,7 @@ static void sc_callback(smartconfig_status_t status, void *pdata)
     }
 }
 
-void smartconfig_example_task(void *parm)
+void smartconfig_task(void *parm)
 {
     EventBits_t uxBits;
     ESP_ERROR_CHECK(esp_smartconfig_set_type(SC_TYPE_ESPTOUCH));
@@ -350,7 +350,7 @@ void app_main()
     initialise_wifi();
     i2c_master_init();
 
-    // xTaskCreate(EC_ecTask, "EC_ecTask", 8192, NULL, 6, NULL);
-    // xTaskCreate(show_angles_task, "show_angles_task", 2048, NULL, 6, NULL);
+    xTaskCreate(EC_ecTask, "EC_ecTask", 8192, NULL, 6, NULL);
+    xTaskCreate(show_angles_task, "show_angles_task", 2048, NULL, 6, NULL);
     wait_for_ip();
 }
