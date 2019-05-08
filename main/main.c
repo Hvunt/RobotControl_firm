@@ -343,7 +343,7 @@ void app_main()
     
     SL_init();
     SL_setState(SL_INIT);
-    // xTaskCreate(SL_task, "SL_task", 2048, NULL, 5, NULL);
+    xTaskCreate(SL_task, "SL_task", 2048, NULL, 5, NULL);
 
     initialise_wifi();
     i2c_master_init();

@@ -9,7 +9,7 @@ static uint8_t state;
 void SL_init(void)
 {
     ledc_timer.duty_resolution = LEDC_TIMER_10_BIT;
-    ledc_timer.freq_hz = 1000;
+    ledc_timer.freq_hz = 100;
     ledc_timer.speed_mode = LEDC_HS_MODE;
     ledc_timer.timer_num = LEDC_HS_TIMER;
     ledc_timer_config(&ledc_timer);
@@ -22,11 +22,6 @@ void SL_init(void)
     ledc_channel_config(&ledc_channel);
 
     ledc_fade_func_install(0);
-
-    ledc_set_fade_with_time(ledc_channel.speed_mode,
-                            ledc_channel.channel, 4000, 3000);
-    ledc_fade_start(ledc_channel.speed_mode,
-                    ledc_channel.channel, LEDC_FADE_NO_WAIT);
 }
 
 void SL_setState(uint8_t _state)
@@ -42,18 +37,27 @@ void SL_task(void *params)
         {
         case SL_INIT:
             ledc_set_fade_with_time(ledc_channel.speed_mode,
-                                    ledc_channel.channel, 4000, 3000);
+                                    ledc_channel.channel, 1023, 10);
             ledc_fade_start(ledc_channel.speed_mode,
                             ledc_channel.channel, LEDC_FADE_NO_WAIT);
+            vTaskDelay(1);
             break;
         case SL_NORMAL_MODE:
-
+            ledc_set_fade_with_time(ledc_channel.speed_mode,
+                                    ledc_channel.channel, 1023, 1000);
+            ledc_fade_start(ledc_channel.speed_mode,
+                            ledc_channel.channel, LEDC_FADE_WAIT_DONE);
+            vTaskDelay(1);
+            break;
             break;
         case SL_ERROR:
         default:
             break;
         }
-        state = 0;
-        vTaskDelay(10);
+        ledc_set_fade_with_time(ledc_channel.speed_mode,
+                                ledc_channel.channel, 0, 1000);
+        ledc_fade_start(ledc_channel.speed_mode,
+                        ledc_channel.channel, LEDC_FADE_WAIT_DONE);
+        vTaskDelay(1);
     }
 }
