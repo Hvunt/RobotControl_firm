@@ -1,4 +1,4 @@
-#include <stdlib.h>
+
 #include "list.h"
 
 void list_add(list_t **list, node_t *node){

@@ -30,6 +30,7 @@ extern "C" {
 #include "motor_defs.h"
 #include "status_led.h"
 #include "e_compass.h"
+#include "lpa.h"
 
 #include "configs.h"
 

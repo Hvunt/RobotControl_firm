@@ -28,6 +28,7 @@ wifi_config_t *wifi_config;
 
 void smartconfig_task(void *parm);
 void tcp_server_task(void *pvParameters);
+void find_path_task(void *params);
 
 void i2c_master_init(void);
 // void i2c_send(char *data);
@@ -330,6 +331,12 @@ void show_angles_task(void *params)
     }
 }
 
+void find_path_task(void *params)
+{
+    ESP_LOGI(TAG, "path founded? %d", lpa_compute_path());
+    vTaskDelete(NULL);
+}
+
 void app_main()
 {
     esp_err_t err = nvs_flash_init();
@@ -349,8 +356,10 @@ void app_main()
 
     initialise_wifi();
     i2c_master_init();
+    ESP_LOGI(TAG, "lpa init code: %d", lpa_init(50, 50, 0, 0, 40, 20));
 
-    xTaskCreate(EC_ecTask, "EC_ecTask", 8192, NULL, 6, NULL);
-    xTaskCreate(show_angles_task, "show_angles_task", 2048, NULL, 6, NULL);
+    xTaskCreate(find_path_task,"find_path", 51200, NULL, 6, NULL);
+    // xTaskCreate(EC_ecTask, "EC_ecTask", 8192, NULL, 6, NULL);
+    // xTaskCreate(show_angles_task, "show_angles_task", 2048, NULL, 6, NULL);
     wait_for_ip();
 }

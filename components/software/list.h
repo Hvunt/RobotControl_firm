@@ -2,13 +2,23 @@
 #define LIST_H
 
 #include "node.h"
+#include <stdlib.h>
 
-typedef struct l
+// typedef struct l
+// {
+//     node_t *nodes;
+//     struct l *next;
+//     // int length, size;
+// } list_t;
+
+struct l
 {
     node_t *nodes;
     struct l *next;
     // int length, size;
-} list_t;
+};
+
+typedef struct l list_t;
 
 void list_add(list_t **list, node_t *node);
 

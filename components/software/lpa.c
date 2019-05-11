@@ -1,14 +1,5 @@
+
 #include "lpa.h"
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <math.h>
-#include <stdbool.h>
-
-#include "windows.h"
-#include <sys\timeb.h>
-#include <time.h>
-// #include "psapi.h"
 
 node_t *start_node, *goal_node;
 
@@ -17,9 +8,6 @@ node_t *map;
 list_t *path;
 
 int x_MAX, y_MAX;
-
-struct timeb start_time, end_time;
-float elapsed_time;
 
 int lpa_init(int _x_MAX, int _y_MAX, int x_START, int y_START, int x_GOAL, int y_GOAL)
 {
@@ -36,12 +24,12 @@ int lpa_init(int _x_MAX, int _y_MAX, int x_START, int y_START, int x_GOAL, int y
     if (start_node == NULL)
         return LPA_INIT_POINT_ERROR;
     start_node->rhs = 0;
-    start_node->isObstacle = false; //!!!!!!!!!!! ONLY FOR TEST!!!!!!!!!
+    // start_node->isObstacle = false; //!!!!!!!!!!! ONLY FOR TEST!!!!!!!!!
 
     goal_node = get_node_coord(x_GOAL, y_GOAL);
     if (goal_node == NULL)
         return LPA_INIT_POINT_ERROR;
-    goal_node->isObstacle = false; //!!!!!!!!!!! ONLY FOR TEST!!!!!!!!!
+    // goal_node->isObstacle = false; //!!!!!!!!!!! ONLY FOR TEST!!!!!!!!!
 
     if (start_node->isObstacle || goal_node->isObstacle)
         return LPA_INIT_POINT_IS_OBSTACLE;
@@ -54,7 +42,7 @@ int lpa_init(int _x_MAX, int _y_MAX, int x_START, int y_START, int x_GOAL, int y
 
 int lpa_compute_path(void)
 {
-    ftime(&start_time);
+    // ftime(&start_time);
     float *top_key = PQ_getTopKey(queue), goal_key[2];
     calc_key(goal_key, goal_node, goal_node);
 
@@ -103,8 +91,9 @@ int lpa_compute_path(void)
 
         calc_key(goal_key, goal_node, goal_node);
     }
-    ftime(&end_time);
+    // ftime(&end_time);
     make_path();
+    print_map(goal_node);
     return 1;
 }
 
@@ -227,8 +216,9 @@ void map_init(node_t *map_, int x_MAX, int y_MAX)
             node.g = INFINITY;
             node.x = x;
             node.y = y;
-            int random = rand() % 100; // isObstacle calculating. Only during development
-            node.isObstacle = (random > 10) ? false : true;
+            // int random = rand() % 100; // isObstacle calculating. Only during development
+            // node.isObstacle = (random > 10) ? false : true;
+            node.isObstacle = false;
             node.isVisited = false;
             node.isPath = false;
             *(map + i) = node;
@@ -237,7 +227,7 @@ void map_init(node_t *map_, int x_MAX, int y_MAX)
     }
 
     //only for debug.
-    make_obstacles();
+    // make_obstacles();
 }
 
 float get_cost(node_t *from, node_t *to)
@@ -262,14 +252,14 @@ void print_map(node_t *node)
     {
         if (map[i].isObstacle)
             printf("#");
-        else if (map[i].x == node->x && map[i].y == node->y)
-            printf("O");
+        // else if (map[i].x == node->x && map[i].y == node->y)
+        //     printf("O");
         else if (map[i].x == goal_node->x && map[i].y == goal_node->y)
             printf("X");
         else if (map[i].x == start_node->x && map[i].y == start_node->y)
             printf("S");
-        else if (map[i].isVisited)
-            printf("-");
+        else if (map[i].isPath)
+            printf("O");
         else
             printf(" ");
 
@@ -281,50 +271,50 @@ void print_map(node_t *node)
     printf("###########\n");
 }
 
-void write_results()
-{
-    time_t t = time(NULL);
-    struct tm current_time = *localtime(&t);
-    char file_name[30] = {};
-    strftime(file_name, 31, "result_%Y-%m-%d_%H-%M-%S.txt", &current_time);
+// void write_results()
+// {
+//     time_t t = time(NULL);
+//     struct tm current_time = *localtime(&t);
+//     char file_name[30] = {};
+//     strftime(file_name, 31, "result_%Y-%m-%d_%H-%M-%S.txt", &current_time);
 
-    FILE *f = fopen(file_name, "wt");
-    if (f == NULL)
-    {
-        printf("Error opening file\n");
-        getchar();
-        exit(1);
-    }
-    fprintf(f, "size of the map: %dx%d,\n start coordinates X: %d, Y: %d\ngoal coordinates X:%d, Y:%d\n", x_MAX, y_MAX, start_node->x, start_node->y, goal_node->x, goal_node->y);
-    elapsed_time = (int)(1000 * (end_time.time - start_time.time) + (end_time.millitm - start_time.millitm));
-    elapsed_time /= 1000;
-    fprintf(f, "elapsed_time: %f sec.", elapsed_time);
-    fprintf(f, "==========================>Y\n");
-    fprintf(f, "||");
-    for (int i = 0; i < x_MAX * y_MAX; i++)
-    {
-        if (map[i].isObstacle)
-            fprintf(f, "#");
-        else if (map[i].x == goal_node->x && map[i].y == goal_node->y)
-            fprintf(f, "X");
-        else if (map[i].x == start_node->x && map[i].y == start_node->y)
-            fprintf(f, "S");
-        else if (map[i].isPath)
-            fprintf(f, "O");
-        else if (map[i].isVisited)
-            fprintf(f, "-");
-        else
-            fprintf(f, " ");
+//     FILE *f = fopen(file_name, "wt");
+//     if (f == NULL)
+//     {
+//         printf("Error opening file\n");
+//         getchar();
+//         exit(1);
+//     }
+//     fprintf(f, "size of the map: %dx%d,\n start coordinates X: %d, Y: %d\ngoal coordinates X:%d, Y:%d\n", x_MAX, y_MAX, start_node->x, start_node->y, goal_node->x, goal_node->y);
+//     elapsed_time = (int)(1000 * (end_time.time - start_time.time) + (end_time.millitm - start_time.millitm));
+//     elapsed_time /= 1000;
+//     fprintf(f, "elapsed_time: %f sec.", elapsed_time);
+//     fprintf(f, "==========================>Y\n");
+//     fprintf(f, "||");
+//     for (int i = 0; i < x_MAX * y_MAX; i++)
+//     {
+//         if (map[i].isObstacle)
+//             fprintf(f, "#");
+//         else if (map[i].x == goal_node->x && map[i].y == goal_node->y)
+//             fprintf(f, "X");
+//         else if (map[i].x == start_node->x && map[i].y == start_node->y)
+//             fprintf(f, "S");
+//         else if (map[i].isPath)
+//             fprintf(f, "O");
+//         else if (map[i].isVisited)
+//             fprintf(f, "-");
+//         else
+//             fprintf(f, " ");
 
-        if (map[i].y == y_MAX - 1)
-            fprintf(f, "\n||");
-    }
-    fprintf(f, "\n\\/\n");
-    fprintf(f, "X\n");
-    fprintf(f, "###########\n");
+//         if (map[i].y == y_MAX - 1)
+//             fprintf(f, "\n||");
+//     }
+//     fprintf(f, "\n\\/\n");
+//     fprintf(f, "X\n");
+//     fprintf(f, "###########\n");
 
-    fclose(f);
-}
+//     fclose(f);
+// }
 
 //make obstacles like a island
 void make_obstacles(void)
