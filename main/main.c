@@ -32,8 +32,8 @@ void tcp_server_task(void *pvParameters);
 void i2c_master_init(void);
 // void i2c_send(char *data);
 void show_angles_task(void *params);
-static esp_err_t i2c_master_write_test(i2c_port_t i2c_num, uint8_t *data_wr, size_t size);
-static esp_err_t i2c_master_find(i2c_port_t i2c_num, uint8_t address, uint8_t data_wr, size_t size);
+
+// static esp_err_t i2c_master_find(i2c_port_t i2c_num, uint8_t address, uint8_t data_wr, size_t size);
 
 static esp_err_t event_handler(void *ctx, system_event_t *event)
 {
@@ -257,33 +257,6 @@ void tcp_server_task(void *pvParameters)
 }
 
 /**
- * @brief i2c sender function
- */
-static esp_err_t i2c_master_write_test(i2c_port_t i2c_num, uint8_t *data_wr, size_t size)
-{
-    i2c_cmd_handle_t cmd = i2c_cmd_link_create();
-    i2c_master_start(cmd);
-    i2c_master_write_byte(cmd, (I2C_STM32_ADDRESS << 1) | WRITE_BIT, ACK_CHECK_EN);
-    i2c_master_write(cmd, data_wr, size, ACK_CHECK_EN);
-    i2c_master_stop(cmd);
-    esp_err_t ret = i2c_master_cmd_begin(i2c_num, cmd, 1000 / portTICK_RATE_MS);
-    i2c_cmd_link_delete(cmd);
-    return ret;
-}
-
-static esp_err_t i2c_master_find(i2c_port_t i2c_num, uint8_t address, uint8_t data_wr, size_t size)
-{
-    i2c_cmd_handle_t cmd = i2c_cmd_link_create();
-    i2c_master_start(cmd);
-    i2c_master_write_byte(cmd, (address << 1) | WRITE_BIT, ACK_CHECK_EN);
-    i2c_master_write(cmd, &data_wr, size, ACK_CHECK_EN);
-    i2c_master_stop(cmd);
-    esp_err_t ret = i2c_master_cmd_begin(i2c_num, cmd, 1000 / portTICK_RATE_MS);
-    i2c_cmd_link_delete(cmd);
-    return ret;
-}
-
-/**
  * @brief i2c master initialization
  */
 void i2c_master_init(void)
@@ -344,26 +317,6 @@ void show_angles_task(void *params)
     }
 }
 
-void i2c_sendingd_task(void *params)
-{
-    uint8_t i = 0;
-    while (1)
-    {
-        uint8_t buffer[10];
-        buffer[0] = COMM_SET_SERVOS_POS;
-        buffer[1] = 1;
-        buffer[2] = i;
-        esp_err_t ret = i2c_master_write_test(I2C_MASTER_NUM, buffer, sizeof(buffer));
-        if (ret != ESP_OK)
-        ESP_LOGE(TAG, "%s", esp_err_to_name(ret));
-        // ESP_ERROR_CHECK(ret);
-        i++;
-        if (i == 180)
-            i = 0;
-        vTaskDelay(20);
-    }
-}
-
 void app_main()
 {
     esp_err_t err = nvs_flash_init();
@@ -384,7 +337,7 @@ void app_main()
     initialise_wifi();
     i2c_master_init();
 
-    xTaskCreate(i2c_sendingd_task, "i2c_sendingd_task", 2048, NULL, 6, NULL);
+    xTaskCreate(SM_sending_task, "SM_sending_task", 2048, NULL, 5, NULL);
 
     // xTaskCreate(EC_ecTask, "EC_ecTask", 8192, NULL, 7, NULL);
     // xTaskCreate(show_angles_task, "show_angles_task", 2048, NULL, 6, NULL);

@@ -27,9 +27,10 @@ extern "C" {
 
 #include "driver/i2c.h"
 
-#include "motor_defs.h"
+// #include "motor_defs.h"
 #include "status_led.h"
 #include "e_compass.h"
+#include "slave_mcu.h"
 
 #include "configs.h"
 

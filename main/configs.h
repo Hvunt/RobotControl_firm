@@ -18,4 +18,6 @@
 #define ACK_VAL                    0x0              /*!< I2C ack value */
 #define NACK_VAL                   0x1              /*!< I2C nack value */
 
+// LED Settings
+
 #define STATUS_LED_IO              33
