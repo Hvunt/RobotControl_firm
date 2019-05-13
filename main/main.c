@@ -31,7 +31,9 @@ void tcp_server_task(void *pvParameters);
 
 void i2c_master_init(void);
 // void i2c_send(char *data);
-// static esp_err_t i2c_master_write_slave(i2c_port_t i2c_num, uint8_t* data_wr, size_t size);
+void show_angles_task(void *params);
+static esp_err_t i2c_master_write_test(i2c_port_t i2c_num, uint8_t *data_wr, size_t size);
+static esp_err_t i2c_master_find(i2c_port_t i2c_num, uint8_t address, uint8_t data_wr, size_t size);
 
 static esp_err_t event_handler(void *ctx, system_event_t *event)
 {
@@ -257,17 +259,29 @@ void tcp_server_task(void *pvParameters)
 /**
  * @brief i2c sender function
  */
-// static esp_err_t i2c_master_write_slave(i2c_port_t i2c_num, uint8_t* data_wr, size_t size)
-// {
-//     i2c_cmd_handle_t cmd = i2c_cmd_link_create();
-//     i2c_master_start(cmd);
-//     i2c_master_write_byte(cmd, ( I2C_STM32_ADDRESS << 1 ) | WRITE_BIT, ACK_CHECK_EN);
-//     i2c_master_write(cmd, data_wr, size, ACK_CHECK_EN);
-//     i2c_master_stop(cmd);
-//     esp_err_t ret = i2c_master_cmd_begin(i2c_num, cmd, 1000 / portTICK_RATE_MS);
-//     i2c_cmd_link_delete(cmd);
-//     return ret;
-// }
+static esp_err_t i2c_master_write_test(i2c_port_t i2c_num, uint8_t *data_wr, size_t size)
+{
+    i2c_cmd_handle_t cmd = i2c_cmd_link_create();
+    i2c_master_start(cmd);
+    i2c_master_write_byte(cmd, (I2C_STM32_ADDRESS << 1) | WRITE_BIT, ACK_CHECK_EN);
+    i2c_master_write(cmd, data_wr, size, ACK_CHECK_EN);
+    i2c_master_stop(cmd);
+    esp_err_t ret = i2c_master_cmd_begin(i2c_num, cmd, 1000 / portTICK_RATE_MS);
+    i2c_cmd_link_delete(cmd);
+    return ret;
+}
+
+static esp_err_t i2c_master_find(i2c_port_t i2c_num, uint8_t address, uint8_t data_wr, size_t size)
+{
+    i2c_cmd_handle_t cmd = i2c_cmd_link_create();
+    i2c_master_start(cmd);
+    i2c_master_write_byte(cmd, (address << 1) | WRITE_BIT, ACK_CHECK_EN);
+    i2c_master_write(cmd, &data_wr, size, ACK_CHECK_EN);
+    i2c_master_stop(cmd);
+    esp_err_t ret = i2c_master_cmd_begin(i2c_num, cmd, 1000 / portTICK_RATE_MS);
+    i2c_cmd_link_delete(cmd);
+    return ret;
+}
 
 /**
  * @brief i2c master initialization
@@ -278,9 +292,9 @@ void i2c_master_init(void)
     i2c_config_t conf;
     conf.mode = I2C_MODE_MASTER;
     conf.sda_io_num = I2C_MASTER_SDA_IO;
-    conf.sda_pullup_en = GPIO_PULLUP_ENABLE;
+    conf.sda_pullup_en = GPIO_PULLUP_DISABLE;
     conf.scl_io_num = I2C_MASTER_SCL_IO;
-    conf.scl_pullup_en = GPIO_PULLUP_ENABLE;
+    conf.scl_pullup_en = GPIO_PULLUP_DISABLE;
     conf.master.clk_speed = I2C_MASTER_FREQ_HZ;
     i2c_param_config(i2c_master_port, &conf);
     i2c_driver_install(i2c_master_port, conf.mode,
@@ -290,28 +304,28 @@ void i2c_master_init(void)
 
 // static void i2c_send(char *data)
 // {
-//     int ret;
-//     uint8_t data_buffer[2];
-//     if (strcmp(data,MOTORS_FORWARD) == 0){
-//         data_buffer[0] = COMM_MOVE;
-//         data_buffer[1] = MOVE_FORWARD;
-//     } else if (strcmp(data,MOTORS_REVERSE) == 0)
-//     {
-//         data_buffer[0] = COMM_MOVE;
-//         data_buffer[1] = MOVE_REVERSE;
-//     } else if (strcmp(data,MOTORS_LEFT) == 0)
-//     {
-//         data_buffer[0] = COMM_MOVE;
-//         data_buffer[1] = MOVE_LEFT;
-//     } else if (strcmp(data,MOTORS_RIGHT) == 0)
-//     {
-//         data_buffer[0] = COMM_MOVE;
-//         data_buffer[1] = MOVE_RIGHT;
-//     } else if (strcmp(data,MOTORS_STOP) == 0)
-//     {
-//         data_buffer[0] = COMM_MOVE;
-//         data_buffer[1] = MOVE_STOP;
-//     }
+//     // int ret;
+//     // uint8_t data_buffer[2];
+//     // if (strcmp(data,MOTORS_FORWARD) == 0){
+//     //     data_buffer[0] = COMM_MOVE;
+//     //     data_buffer[1] = MOVE_FORWARD;
+//     // } else if (strcmp(data,MOTORS_REVERSE) == 0)
+//     // {
+//     //     data_buffer[0] = COMM_MOVE;
+//     //     data_buffer[1] = MOVE_REVERSE;
+//     // } else if (strcmp(data,MOTORS_LEFT) == 0)
+//     // {
+//     //     data_buffer[0] = COMM_MOVE;
+//     //     data_buffer[1] = MOVE_LEFT;
+//     // } else if (strcmp(data,MOTORS_RIGHT) == 0)
+//     // {
+//     //     data_buffer[0] = COMM_MOVE;
+//     //     data_buffer[1] = MOVE_RIGHT;
+//     // } else if (strcmp(data,MOTORS_STOP) == 0)
+//     // {
+//     //     data_buffer[0] = COMM_MOVE;
+//     //     data_buffer[1] = MOVE_STOP;
+//     // }
 
 //     ret = i2c_master_write_slave(I2C_MASTER_NUM, data_buffer, sizeof(data_buffer));
 //     if (ret == ESP_ERR_TIMEOUT)
@@ -323,10 +337,30 @@ void show_angles_task(void *params)
     vTaskDelay(2000);
     while (1)
     {
-        ESP_LOGI(TAG, "Yaw %f", EC_getYaw());
-        ESP_LOGI(TAG, "Pitch %f", EC_getPitch());
-        ESP_LOGI(TAG, "Roll %f", EC_getRoll());
+        // ESP_LOGI(TAG, "Yaw %f", EC_getYaw());
+        // ESP_LOGI(TAG, "Pitch %f", EC_getPitch());
+        // ESP_LOGI(TAG, "Roll %f", EC_getRoll());
         vTaskDelay(100);
+    }
+}
+
+void i2c_sendingd_task(void *params)
+{
+    uint8_t i = 0;
+    while (1)
+    {
+        uint8_t buffer[10];
+        buffer[0] = COMM_SET_SERVOS_POS;
+        buffer[1] = 1;
+        buffer[2] = i;
+        esp_err_t ret = i2c_master_write_test(I2C_MASTER_NUM, buffer, sizeof(buffer));
+        if (ret != ESP_OK)
+        ESP_LOGE(TAG, "%s", esp_err_to_name(ret));
+        // ESP_ERROR_CHECK(ret);
+        i++;
+        if (i == 180)
+            i = 0;
+        vTaskDelay(20);
     }
 }
 
@@ -342,7 +376,7 @@ void app_main()
         err = nvs_flash_init();
     }
     ESP_ERROR_CHECK(err);
-    
+
     SL_init();
     SL_setState(SL_INIT);
     xTaskCreate(SL_task, "SL_task", 2048, NULL, 3, NULL);
@@ -350,7 +384,9 @@ void app_main()
     initialise_wifi();
     i2c_master_init();
 
-    xTaskCreate(EC_ecTask, "EC_ecTask", 8192, NULL, 7, NULL);
+    xTaskCreate(i2c_sendingd_task, "i2c_sendingd_task", 2048, NULL, 6, NULL);
+
+    // xTaskCreate(EC_ecTask, "EC_ecTask", 8192, NULL, 7, NULL);
     // xTaskCreate(show_angles_task, "show_angles_task", 2048, NULL, 6, NULL);
     wait_for_ip();
 }
