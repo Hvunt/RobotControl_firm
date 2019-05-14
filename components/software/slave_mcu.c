@@ -24,7 +24,7 @@ void SM_init()
 {
     //default initialization
     slave_mcu_settings.robot_type = 0;
-    slave_mcu_settings.encoder_type = 2;
+    slave_mcu_settings.encoder_type = 3;
     slave_mcu_settings.dc_ports = 0x30 | (TERMINAL_ONE | TERMINAL_TWO | TERMINAL_THREE | TERMINAL_FOUR);
 }
 
