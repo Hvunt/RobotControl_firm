@@ -358,12 +358,9 @@ void app_main()
     i2c_master_init();
     ESP_LOGI(TAG, "lpa init code: %d", lpa_init(50, 50, 0, 0, 40, 20));
 
-<<<<<<< HEAD
     xTaskCreate(EC_ecTask, "EC_ecTask", 8192, NULL, 7, NULL);
-=======
     xTaskCreate(find_path_task,"find_path", 51200, NULL, 6, NULL);
     // xTaskCreate(EC_ecTask, "EC_ecTask", 8192, NULL, 6, NULL);
->>>>>>> 318fe891ed4a944eb6aacec9d19e5333afcfcc39
     // xTaskCreate(show_angles_task, "show_angles_task", 2048, NULL, 6, NULL);
     wait_for_ip();
 }
