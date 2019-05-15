@@ -11,6 +11,8 @@
 
 #define PORT 80
 
+typedef struct json_defs json_defs_t;
+
 /* FreeRTOS event group to signal when we are connected & ready to make a request */
 static EventGroupHandle_t wifi_event_group;
 
@@ -32,7 +34,10 @@ void find_path_task(void *params);
 
 void i2c_master_init(void);
 // void i2c_send(char *data);
-// static esp_err_t i2c_master_write_slave(i2c_port_t i2c_num, uint8_t* data_wr, size_t size);
+void show_angles_task(void *params);
+static json_defs_t jparser(char *data, uint16_t length);
+
+// static esp_err_t i2c_master_find(i2c_port_t i2c_num, uint8_t address, uint8_t data_wr, size_t size);
 
 static esp_err_t event_handler(void *ctx, system_event_t *event)
 {
@@ -131,7 +136,7 @@ void smartconfig_task(void *parm)
         {
             ESP_LOGI(TAG, "smartconfig over");
             esp_smartconfig_stop();
-            xTaskCreate(tcp_server_task, "tcp_server_task", 4096, NULL, 3, NULL);
+            xTaskCreate(tcp_server_task, "tcp_server_task", 8192, NULL, 4, NULL);
             SL_setState(SL_WAIT_FOR_CONNECTION_TO_DEVICE);
             vTaskDelete(NULL);
         }
@@ -149,7 +154,7 @@ static void wait_for_ip()
 
 void tcp_server_task(void *pvParameters)
 {
-    char rx_buffer[128];
+    char rx_buffer[256];
     char addr_str[128];
     int addr_family;
     int ip_protocol;
@@ -227,11 +232,16 @@ void tcp_server_task(void *pvParameters)
                 }
 
                 rx_buffer[len] = 0; // Null-terminate whatever we received and treat like a string
-                ESP_LOGI(TAG, "Received %d bytes from %s:", len, addr_str);
-                ESP_LOGI(TAG, "%s", rx_buffer);
+                // ESP_LOGI(TAG, "Received %d bytes from %s:", len, addr_str);
+                // ESP_LOGI(TAG, "%s", rx_buffer);
 
                 // i2c_send(rx_buffer);
-                int err = send(sock, rx_buffer, len, 0);
+                json_defs_t request = jparser(rx_buffer, len);
+                if (request.action != NULL)
+                {
+                    ESP_LOGI(TAG, "App request: %s", request.action);
+                }
+                // int err = send(sock, rx_buffer, len, 0);
                 if (err < 0)
                 {
                     ESP_LOGE(TAG, "Error occured during sending: errno %d", errno);
@@ -256,21 +266,6 @@ void tcp_server_task(void *pvParameters)
 }
 
 /**
- * @brief i2c sender function
- */
-// static esp_err_t i2c_master_write_slave(i2c_port_t i2c_num, uint8_t* data_wr, size_t size)
-// {
-//     i2c_cmd_handle_t cmd = i2c_cmd_link_create();
-//     i2c_master_start(cmd);
-//     i2c_master_write_byte(cmd, ( I2C_STM32_ADDRESS << 1 ) | WRITE_BIT, ACK_CHECK_EN);
-//     i2c_master_write(cmd, data_wr, size, ACK_CHECK_EN);
-//     i2c_master_stop(cmd);
-//     esp_err_t ret = i2c_master_cmd_begin(i2c_num, cmd, 1000 / portTICK_RATE_MS);
-//     i2c_cmd_link_delete(cmd);
-//     return ret;
-// }
-
-/**
  * @brief i2c master initialization
  */
 void i2c_master_init(void)
@@ -279,9 +274,9 @@ void i2c_master_init(void)
     i2c_config_t conf;
     conf.mode = I2C_MODE_MASTER;
     conf.sda_io_num = I2C_MASTER_SDA_IO;
-    conf.sda_pullup_en = GPIO_PULLUP_ENABLE;
+    conf.sda_pullup_en = GPIO_PULLUP_DISABLE;
     conf.scl_io_num = I2C_MASTER_SCL_IO;
-    conf.scl_pullup_en = GPIO_PULLUP_ENABLE;
+    conf.scl_pullup_en = GPIO_PULLUP_DISABLE;
     conf.master.clk_speed = I2C_MASTER_FREQ_HZ;
     i2c_param_config(i2c_master_port, &conf);
     i2c_driver_install(i2c_master_port, conf.mode,
@@ -289,47 +284,122 @@ void i2c_master_init(void)
                        I2C_MASTER_TX_BUF_DISABLE, 0);
 }
 
+static json_defs_t jparser(char *data, uint16_t length)
+{
+#define MAX_TOKEN_LENGTH 255
+    jsmn_parser parser;
+    jsmntok_t tokens[MAX_TOKEN_LENGTH];
+    jsmn_init(&parser);
+    int8_t result = jsmn_parse(&parser, data, strlen(data), tokens, sizeof(tokens) / sizeof(tokens[0]));
+
+    json_defs_t response;
+    if (result > 0)
+    {
+        char keyString[MAX_TOKEN_LENGTH];
+        char prev_keyString[MAX_TOKEN_LENGTH];
+        for (uint8_t i = 1; i <= result - 1; i++)
+        {
+            jsmntok_t key = tokens[i];
+            uint16_t length = key.end - key.start;
+            // ESP_LOGI(TAG, "JSON tokens length: %d", length);
+            if (length <= MAX_TOKEN_LENGTH)
+            {
+                memcpy(keyString, &data[key.start], length);
+                keyString[length] = '\0';
+                // if (strcmp((char *)keyString, JSON_TOKEN_NAME_RESPONSE) == 0)
+                // {
+                //     ESP_LOGI(TAG, "JSON token ");
+                // }
+                if (strcmp(prev_keyString, JSON_TOKEN_NAME_ACTION) == 0)
+                {
+                    ESP_LOGI(TAG, "JSON token %s", keyString);
+                    strcpy(response.action, keyString);
+                }
+                else if (strcmp(prev_keyString, JSON_TOKEN_NAME_robot_type) == 0)
+                {
+                    response.robot_type = atoi(keyString);
+                }
+                else if (strcmp(prev_keyString, JSON_TOKEN_NAME_wheels_type) == 0)
+                {
+                    response.wheels_type = atoi(keyString);
+                }
+                else if (strcmp(prev_keyString, JSON_TOKEN_NAME_motors_ports) == 0)
+                {
+                    response.motors_ports = atoi(keyString);
+                }
+                else if (strcmp(prev_keyString, JSON_TOKEN_NAME_encoder_type) == 0)
+                {
+                    response.encoder_type = atoi(keyString);
+                }
+                else if (strcmp(prev_keyString, JSON_TOKEN_NAME_servos_ports) == 0)
+                {
+                    response.servos_ports = atoi(keyString);
+                }
+                else if (strcmp(prev_keyString, JSON_TOKEN_NAME_coordinates) == 0)
+                {
+                    strcpy(response.coordinates, keyString);
+                }
+                else if (strcmp(prev_keyString, JSON_TOKEN_NAME_algorithm) == 0)
+                {
+                    strcpy(response.algorithm, keyString);
+                }
+
+                strcpy(prev_keyString, keyString);
+            }
+            else
+            {
+                ESP_LOGE(TAG, "Token too long");
+            }
+        }
+    }
+    else
+    {
+        ESP_LOGE(TAG, "Failed to parse JSON: %d", result);
+    }
+    return response;
+}
+
 // static void i2c_send(char *data)
 // {
-//     int ret;
-//     uint8_t data_buffer[2];
-//     if (strcmp(data,MOTORS_FORWARD) == 0){
-//         data_buffer[0] = COMM_MOVE;
-//         data_buffer[1] = MOVE_FORWARD;
-//     } else if (strcmp(data,MOTORS_REVERSE) == 0)
-//     {
-//         data_buffer[0] = COMM_MOVE;
-//         data_buffer[1] = MOVE_REVERSE;
-//     } else if (strcmp(data,MOTORS_LEFT) == 0)
-//     {
-//         data_buffer[0] = COMM_MOVE;
-//         data_buffer[1] = MOVE_LEFT;
-//     } else if (strcmp(data,MOTORS_RIGHT) == 0)
-//     {
-//         data_buffer[0] = COMM_MOVE;
-//         data_buffer[1] = MOVE_RIGHT;
-//     } else if (strcmp(data,MOTORS_STOP) == 0)
-//     {
-//         data_buffer[0] = COMM_MOVE;
-//         data_buffer[1] = MOVE_STOP;
-//     }
+//     // int ret;
+//     // uint8_t data_buffer[2];
+//     // if (strcmp(data,MOTORS_FORWARD) == 0){
+//     //     data_buffer[0] = COMM_MOVE;
+//     //     data_buffer[1] = MOVE_FORWARD;
+//     // } else if (strcmp(data,MOTORS_REVERSE) == 0)
+//     // {
+//     //     data_buffer[0] = COMM_MOVE;
+//     //     data_buffer[1] = MOVE_REVERSE;
+//     // } else if (strcmp(data,MOTORS_LEFT) == 0)
+//     // {
+//     //     data_buffer[0] = COMM_MOVE;
+//     //     data_buffer[1] = MOVE_LEFT;
+//     // } else if (strcmp(data,MOTORS_RIGHT) == 0)
+//     // {
+//     //     data_buffer[0] = COMM_MOVE;
+//     //     data_buffer[1] = MOVE_RIGHT;
+//     // } else if (strcmp(data,MOTORS_STOP) == 0)
+//     // {
+//     //     data_buffer[0] = COMM_MOVE;
+//     //     data_buffer[1] = MOVE_STOP;
+//     // }
 
 //     ret = i2c_master_write_slave(I2C_MASTER_NUM, data_buffer, sizeof(data_buffer));
 //     if (ret == ESP_ERR_TIMEOUT)
 //         printf("i2c timeout\n");
 // }
 
-void show_angles_task(void *params)
-{
-    vTaskDelay(2000);
-    while (1)
-    {
-        ESP_LOGI(TAG, "Yaw %f", EC_getYaw());
-        ESP_LOGI(TAG, "Pitch %f", EC_getPitch());
-        ESP_LOGI(TAG, "Roll %f", EC_getRoll());
-        vTaskDelay(100);
-    }
-}
+// void show_angles_task(void *params)
+// {
+//     vTaskDelay(2000);
+//     while (1)
+//     {
+//         // ESP_LOGI(TAG, "Yaw %f", EC_getYaw());
+//         // ESP_LOGI(TAG, "Pitch %f", EC_getPitch());
+//         // ESP_LOGI(TAG, "Roll %f", EC_getRoll());
+//         vTaskDelay(100);
+//     }
+// }
 
 void find_path_task(void *params)
 {
@@ -349,14 +419,14 @@ void app_main()
         err = nvs_flash_init();
     }
     ESP_ERROR_CHECK(err);
-    
+
     SL_init();
     SL_setState(SL_INIT);
     xTaskCreate(SL_task, "SL_task", 2048, NULL, 3, NULL);
 
     initialise_wifi();
     i2c_master_init();
-    ESP_LOGI(TAG, "lpa init code: %d", lpa_init(50, 50, 0, 0, 40, 20));
+    ESP_LOGI(TAG, "lpa init code: %d", lpa_init(20, 20, 0, 0, 5, 8));
 
     xTaskCreate(EC_ecTask, "EC_ecTask", 8192, NULL, 7, NULL);
     xTaskCreate(find_path_task,"find_path", 51200, NULL, 6, NULL);

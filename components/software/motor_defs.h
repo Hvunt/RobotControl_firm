@@ -6,6 +6,14 @@
 #define MOTORS_STOP "STOP"
 
 /*
+ * Terminals definitions
+ */
+#define TERMINAL_ONE		 0b00000001
+#define TERMINAL_TWO		 0b00000010
+#define TERMINAL_THREE		 0b00000100
+#define TERMINAL_FOUR		 0b00001000
+
+/*
  * Commands definitions
  */
 //SET

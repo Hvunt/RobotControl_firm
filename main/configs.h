@@ -2,7 +2,7 @@
 
 //I2C Settings
 
-#define I2C_STM32_ADDRESS          0x30
+#define I2C_STM32_ADDRESS          0x18
 
 #define I2C_MASTER_SCL_IO          25               /*!< gpio number for I2C master clock */
 #define I2C_MASTER_SDA_IO          26               /*!< gpio number for I2C master data  */
@@ -17,5 +17,7 @@
 #define ACK_CHECK_DIS              0x0              /*!< I2C master will not check ack from slave */
 #define ACK_VAL                    0x0              /*!< I2C ack value */
 #define NACK_VAL                   0x1              /*!< I2C nack value */
+
+// LED Settings
 
 #define STATUS_LED_IO              33
