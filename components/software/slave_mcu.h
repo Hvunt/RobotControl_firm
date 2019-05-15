@@ -11,7 +11,7 @@ struct slave_mcu
 {
     //0 - wheeled, 1 - walked, 2 - hybrid
     uint8_t robot_type;
-    //1 - optical, 2 - magnet/rotary, 3 - speed sensor
+    //1 - optical, 2 - magnet/rotary, 3 - speed sensor, 0 - error
     uint8_t encoder_type;
     //[0:3] - used terminals M1 = 0, M2, etc. Set bits (M1 = 0s bit, M2 = 1st bit, etc.)
 	//[4:8] - position of motor. 1 - left, 0 - right. For example: if fourth bit is 1 then M1 is left motor

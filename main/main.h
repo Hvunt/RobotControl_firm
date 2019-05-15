@@ -20,6 +20,8 @@ extern "C" {
 #include "tcpip_adapter.h"
 #include "esp_smartconfig.h"
 
+#include "jsmn.h"
+
 #include "lwip/err.h"
 #include "lwip/sockets.h"
 #include "lwip/sys.h"
@@ -27,10 +29,10 @@ extern "C" {
 
 #include "driver/i2c.h"
 
-// #include "motor_defs.h"
 #include "status_led.h"
 #include "e_compass.h"
 #include "slave_mcu.h"
+#include "json_defs.h"
 
 #include "configs.h"
 
