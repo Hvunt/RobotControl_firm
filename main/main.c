@@ -389,17 +389,17 @@ static json_defs_t jparser(char *data, uint16_t length)
 //         printf("i2c timeout\n");
 // }
 
-// void show_angles_task(void *params)
-// {
-//     vTaskDelay(2000);
-//     while (1)
-//     {
-//         // ESP_LOGI(TAG, "Yaw %f", EC_getYaw());
-//         // ESP_LOGI(TAG, "Pitch %f", EC_getPitch());
-//         // ESP_LOGI(TAG, "Roll %f", EC_getRoll());
-//         vTaskDelay(100);
-//     }
-// }
+void show_angles_task(void *params)
+{
+    vTaskDelay(2000 / portTICK_RATE_MS);
+    while (1)
+    {
+        ESP_LOGI(TAG, "Yaw %f", EC_getYaw());
+        ESP_LOGI(TAG, "Pitch %f", EC_getPitch());
+        ESP_LOGI(TAG, "Roll %f", EC_getRoll());
+        vTaskDelay(1000 / portTICK_RATE_MS);
+    }
+}
 
 void find_path_task(void *params)
 {
@@ -426,11 +426,10 @@ void app_main()
 
     initialise_wifi();
     i2c_master_init();
-    ESP_LOGI(TAG, "lpa init code: %d", lpa_init(20, 20, 0, 0, 5, 8));
+    ESP_LOGI(TAG, "lpa init code: %d", lpa_init(20, 20, 2, 1, 16, 18));
 
-    xTaskCreate(EC_ecTask, "EC_ecTask", 8192, NULL, 7, NULL);
-    xTaskCreate(find_path_task,"find_path", 51200, NULL, 6, NULL);
-    // xTaskCreate(EC_ecTask, "EC_ecTask", 8192, NULL, 6, NULL);
-    // xTaskCreate(show_angles_task, "show_angles_task", 2048, NULL, 6, NULL);
+    xTaskCreate(EC_ecTask, "EC_ecTask", 8192, NULL, 6, NULL);
+    xTaskCreate(find_path_task,"find_path", 40960, NULL, 6, NULL);
+    xTaskCreate(show_angles_task, "show_angles_task", 2048, NULL, 2, NULL);
     wait_for_ip();
 }

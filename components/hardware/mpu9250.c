@@ -187,7 +187,6 @@ void MPU_GetMag(int16_t *data)
 	while (!status)
 	{
 		status = MPU_ReadData(MPU9250_ID_MAGNET, MPU9250_MAG_CONFIG_ST1) & 0x01;
-		ESP_LOGI("MPU9250", "HERE NOW");
 	}
 	if (status)
 	{
