@@ -238,10 +238,16 @@ void tcp_server_task(void *pvParameters)
                 json_defs_t request = jparser(rx_buffer, len);
                 if (request.action != NULL)
                 {
-                    ESP_LOGI(TAG, "App request: %s", request.action);
-                }
-                if (request.algorithm != NULL)
-                {
+                    if (strcmp(request.action, JSON_TOKEN_NAME_ACTION_move) == 0)
+                    {
+                        if (strcmp(request.algorithm, JSON_TOKEN_NAME_ALGORITHM_lpa) == 0)
+                        {
+                            int goal[2];
+                            sscanf(request.coordinates, "%d:%d", &goal[0], &goal[1]);
+                            ESP_LOGI(TAG, "Requested coordinates: %d, %d", goal[0], goal[1]);
+                            xTaskCreate(find_path_task, "lpa_task", 3096, (void *) goal, 6, NULL);                            
+                        }
+                    }
                     ESP_LOGI(TAG, "App request: %s", request.action);
                 }
                 
@@ -258,11 +264,11 @@ void tcp_server_task(void *pvParameters)
         {
             ESP_LOGE(TAG, "Shutting down socket and restarting...");
             shutdown(sock, 0);
-            vTaskDelay(100);
+            vTaskDelay(100 / portTICK_RATE_MS);
             close(listen_sock);
-            vTaskDelay(100);
+            vTaskDelay(100 / portTICK_RATE_MS);
             close(sock);
-            vTaskDelay(100);
+            vTaskDelay(100 / portTICK_RATE_MS);
             SL_setState(SL_WAIT_FOR_CONNECTION_TO_DEVICE);
             sending_sensors_data_flag = 0;
         }
@@ -406,9 +412,21 @@ static json_defs_t jparser(char *data, uint16_t length)
 //     }
 // }
 
-void find_path_task(void *params)
+// void find_path_task(void *params)
+// {
+//     ESP_LOGI(TAG, "path founded? %d", lpa_compute_path());
+//     vTaskDelete(NULL);
+// }
+
+void find_path_task(void * parameters)
 {
-    ESP_LOGI(TAG, "path founded? %d", lpa_compute_path());
+    // configASSERT( ( ( int *) parameters ) == 1 );
+    int *goal = (int*)parameters;
+    ESP_LOGI(TAG, "lpa init code: %d", lpa_init(20, 20, 0, 0));
+    ESP_LOGI(TAG, "Path founded: %d",lpa_compute_path(goal[0], goal[1]));
+    char coordinates[5];
+    lpa_get_current_coords(coordinates);
+    ESP_LOGI(TAG, "Current coordinates is %s", coordinates);
     vTaskDelete(NULL);
 }
 
@@ -425,7 +443,7 @@ static void sending_sensors_data_task(void *params)
 
                 jwOpen((char *)tx_buff, sizeof(tx_buff), JW_OBJECT, JW_COMPACT);
                     jwObj_object("response");
-                        jwObj_string("action", "sensors_data");
+                        jwObj_string(JSON_TOKEN_NAME_ACTION, JSON_TOKEN_NAME_ACTION_sensors_data);
                         jwObj_object("data");
                             jwObj_string("coordinates", "10:10");
                             jwObj_double("yaw", EC_getYaw());
@@ -471,7 +489,6 @@ void app_main()
 
     initialise_wifi();
     i2c_master_init();
-    ESP_LOGI(TAG, "lpa init code: %d", lpa_init(20, 20, 0, 0));
 
     xTaskCreate(EC_ecTask, "EC_ecTask", 8192, NULL, 6, NULL);
     // xTaskCreate(find_path_task, "find_path", 40960, NULL, 6, NULL);

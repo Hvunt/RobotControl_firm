@@ -6,7 +6,7 @@
 #define JSON_TOKEN_NAME_ACTION "action"
 #define JSON_TOKEN_NAME_ACTION_set_settings "set_settings"
 #define JSON_TOKEN_NAME_ACTION_get_settings "get_settings"
-#define JSON_TOKEN_NAME_ACTION_sensors "sensors_data"
+#define JSON_TOKEN_NAME_ACTION_sensors_data "sensors_data"
 #define JSON_TOKEN_NAME_ACTION_move "move"
 
 #define JSON_TOKEN_NAME_DATA "data"
@@ -18,6 +18,10 @@
 #define JSON_TOKEN_NAME_servos_ports "servos_ports"
 #define JSON_TOKEN_NAME_coordinates "coordinates"
 #define JSON_TOKEN_NAME_algorithm "algorithm"
+
+#define JSON_TOKEN_NAME_ALGORITHM_lpa "lpa"
+#define JSON_TOKEN_NAME_ALGORITHM_naive "naive"
+#define JSON_TOKEN_NAME_ALGORITHM_dstar_lite "dstar_lite"
 
 struct json_defs
 {
