@@ -11,6 +11,7 @@
 
 #include <stddef.h>
 #include <stdio.h>
+#include <stdint.h>
 #include <string.h>	// memset()
 
 #include "jWrite.h"
@@ -155,7 +156,7 @@ void jwObj_int( JWC_DECL char *key, int value )
 
 void jwObj_double( JWC_DECL char *key, double value )
 {
-	modp_dtoa2( value, JWC(tmpbuf), 6 );
+	modp_dtoa2( value, JWC(tmpbuf), 4 );
 	jwObj_raw( JWC_PARAM key, JWC(tmpbuf) );
 }
 

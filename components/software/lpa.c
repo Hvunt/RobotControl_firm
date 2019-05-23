@@ -1,15 +1,15 @@
 
 #include "lpa.h"
 
-node_t *start_node, *goal_node;
+node_t *current_node/*, *goal_node*/;
 
 PQ_list_t *queue;
 node_t *map;
 list_t *path;
 
-int x_MAX, y_MAX;
+static int x_MAX, y_MAX;
 
-int lpa_init(int _x_MAX, int _y_MAX, int x_START, int y_START, int x_GOAL, int y_GOAL)
+int lpa_init(int _x_MAX, int _y_MAX, int x_START, int y_START/*, int x_GOAL, int y_GOAL*/)
 {
     x_MAX = _x_MAX;
     y_MAX = _y_MAX;
@@ -26,23 +26,26 @@ int lpa_init(int _x_MAX, int _y_MAX, int x_START, int y_START, int x_GOAL, int y
     start_node->rhs = 0;
     // start_node->isObstacle = false; //!!!!!!!!!!! ONLY FOR TEST!!!!!!!!!
 
-    goal_node = get_node_coord(x_GOAL, y_GOAL);
-    if (goal_node == NULL)
-        return LPA_INIT_POINT_ERROR;
+    // goal_node = get_node_coord(x_GOAL, y_GOAL);
+    // if (goal_node == NULL)
+    //     return LPA_INIT_POINT_ERROR;
     // goal_node->isObstacle = false; //!!!!!!!!!!! ONLY FOR TEST!!!!!!!!!
 
-    if (start_node->isObstacle || goal_node->isObstacle)
+    if (start_node->isObstacle/* || goal_node->isObstacle*/)
         return LPA_INIT_POINT_IS_OBSTACLE;
 
-    float key_[2];
-    calc_key(key_, start_node, goal_node);
-    PQ_push(&queue, key_, start_node);
+    // float key_[2];
+    // calc_key(key_, start_node, goal_node);
+    // PQ_push(&queue, key_, start_node);
     return LPA_INIT_OK;
 }
 
-int lpa_compute_path(void)
+int lpa_compute_path(node_t *goal_node)
 {
     // ftime(&start_time);
+    float key_[2];
+    calc_key(key_, start_node, goal_node);
+    PQ_push(&queue, key_, start_node);
     float *top_key = PQ_getTopKey(queue), goal_key[2];
     calc_key(goal_key, goal_node, goal_node);
 
@@ -136,7 +139,7 @@ node_t *get_node_coord(int x, int y)
 }
 
 //It is equivalent of get_successors
-void get_predecessors(list_t **pred_list, node_t *current_node)
+void get_predecessors(list_t **pred_list, node_t *from_node)
 {
     for (int x = -1; x <= 1; x++)
     {
@@ -144,7 +147,7 @@ void get_predecessors(list_t **pred_list, node_t *current_node)
         {
             if (x != 0 || y != 0)
             {
-                node_t *node = get_node_coord(current_node->x + x, current_node->y + y);
+                node_t *node = get_node_coord(from_node->x + x, from_node->y + y);
                 if (node != NULL && !node->isObstacle)
                 {
                     list_add(pred_list, node);
@@ -154,7 +157,7 @@ void get_predecessors(list_t **pred_list, node_t *current_node)
     }
 }
 
-void get_successors(list_t **suc_list, node_t *current_node)
+void get_successors(list_t **suc_list, node_t *from_node)
 {
     for (int x = -1; x <= 1; x++)
     {
@@ -162,7 +165,7 @@ void get_successors(list_t **suc_list, node_t *current_node)
         {
             if (x != 0 || y != 0)
             {
-                node_t *node = get_node_coord(current_node->x + x, current_node->y + y);
+                node_t *node = get_node_coord(from_node->x + x, from_node->y + y);
                 if (node != NULL && !node->isObstacle)
                 {
                     list_add(suc_list, node);
@@ -173,14 +176,14 @@ void get_successors(list_t **suc_list, node_t *current_node)
 }
 
 //get min node by rhs
-node_t *get_min_pred(node_t *current_node)
+node_t *get_min_pred(node_t *from_node)
 {
-    node_t *min_node = current_node;
+    node_t *min_node = from_node;
     for (int x = -1; x <= 1; x++)
     {
         for (int y = -1; y <= 1; y++)
         {
-            node_t *temp = get_node_coord(current_node->x + x, current_node->y + y);
+            node_t *temp = get_node_coord(from_node->x + x, from_node->y + y);
             if (temp != NULL && !temp->isObstacle && min_node->rhs > temp->rhs)
             {
                 min_node = temp;
@@ -238,10 +241,10 @@ float get_cost(node_t *from, node_t *to)
         return sqrt(2);
 }
 
-void calc_key(float *key, node_t *current_node, node_t *goal_node)
+void calc_key(float *key, node_t *from_node, node_t *goal_node)
 {
-    key[0] = fmin(current_node->g, current_node->rhs) + Node_getHeuristic(current_node, goal_node);
-    key[1] = fmin(current_node->rhs, current_node->g);
+    key[0] = fmin(from_node->g, from_node->rhs) + Node_getHeuristic(from_node, goal_node);
+    key[1] = fmin(from_node->rhs, from_node->g);
 }
 
 void print_map(node_t *node)

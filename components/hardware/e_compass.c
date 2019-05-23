@@ -26,6 +26,21 @@ float EC_getYaw(void)
     return yaw;
 }
 
+float EC_getAccelX(void)
+{
+    return MPU_GetAccel_X() / aRes * 9.81f;
+}
+
+float EC_getAccelY(void)
+{
+    return MPU_GetAccel_Y() / aRes * 9.81f;
+}
+
+float EC_getAccelZ(void)
+{
+    return MPU_GetAccel_Z() / aRes * 9.81f;
+}
+
 void EC_ecTask(void *data)
 {
     /*getting calibrated data etc.*/

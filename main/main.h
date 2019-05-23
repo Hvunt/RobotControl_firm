@@ -21,6 +21,7 @@ extern "C" {
 #include "esp_smartconfig.h"
 
 #include "jsmn.h"
+#include "jWrite.h"
 
 #include "lwip/err.h"
 #include "lwip/sockets.h"
@@ -36,6 +37,14 @@ extern "C" {
 #include "json_defs.h"
 
 #include "configs.h"
+
+void smartconfig_task(void *parm);
+void tcp_server_task(void *pvParameters);
+void find_path_task(void *params);
+
+void i2c_master_init(void);
+// void i2c_send(char *data);
+void show_angles_task(void *params);
 
 #ifdef __cplusplus
 }

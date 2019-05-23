@@ -13,7 +13,7 @@
 
 typedef struct l list_t;
 
-int lpa_init(int x_MAX, int y_MAX, int x_START, int y_START, int x_GOAL, int y_GOAL);
+int lpa_init(int x_MAX, int y_MAX, int x_START, int y_START/*, int x_GOAL, int y_GOAL*/);
 int lpa_compute_path(void);
 void get_predecessors(list_t **pred_list, node_t *current_node);
 void get_successors(list_t **suc_list, node_t *current_node);

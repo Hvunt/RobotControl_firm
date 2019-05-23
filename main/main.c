@@ -26,16 +26,14 @@ static const char *TAG = "RC";
 const int IPV4_GOTIP_BIT = BIT3;
 const int IPV6_GOTIP_BIT = BIT4;
 
+int sock;
+
 wifi_config_t *wifi_config;
 
-void smartconfig_task(void *parm);
-void tcp_server_task(void *pvParameters);
-void find_path_task(void *params);
+static uint8_t sending_sensors_data_flag = 0;
 
-void i2c_master_init(void);
-// void i2c_send(char *data);
-void show_angles_task(void *params);
 static json_defs_t jparser(char *data, uint16_t length);
+static void sending_sensors_data_task(void *params);
 
 // static esp_err_t i2c_master_find(i2c_port_t i2c_num, uint8_t address, uint8_t data_wr, size_t size);
 
@@ -136,7 +134,7 @@ void smartconfig_task(void *parm)
         {
             ESP_LOGI(TAG, "smartconfig over");
             esp_smartconfig_stop();
-            xTaskCreate(tcp_server_task, "tcp_server_task", 8192, NULL, 4, NULL);
+            xTaskCreate(tcp_server_task, "tcp_server_task", 10240, NULL, 4, NULL);
             SL_setState(SL_WAIT_FOR_CONNECTION_TO_DEVICE);
             vTaskDelete(NULL);
         }
@@ -195,7 +193,7 @@ void tcp_server_task(void *pvParameters)
 
         struct sockaddr_in6 sourceAddr; // Large enough for both IPv4 or IPv6
         uint addrLen = sizeof(sourceAddr);
-        int sock = accept(listen_sock, (struct sockaddr *)&sourceAddr, &addrLen);
+        sock = accept(listen_sock, (struct sockaddr *)&sourceAddr, &addrLen);
         if (sock < 0)
         {
             ESP_LOGE(TAG, "Unable to accept connection: errno %d", errno);
@@ -203,6 +201,7 @@ void tcp_server_task(void *pvParameters)
         }
         ESP_LOGI(TAG, "Socket accepted");
         SL_setState(SL_NORMAL_MODE);
+        sending_sensors_data_flag = 1;
         while (1)
         {
             int len = recv(sock, rx_buffer, sizeof(rx_buffer) - 1, 0);
@@ -241,6 +240,11 @@ void tcp_server_task(void *pvParameters)
                 {
                     ESP_LOGI(TAG, "App request: %s", request.action);
                 }
+                if (request.algorithm != NULL)
+                {
+                    ESP_LOGI(TAG, "App request: %s", request.action);
+                }
+                
                 // int err = send(sock, rx_buffer, len, 0);
                 if (err < 0)
                 {
@@ -260,6 +264,7 @@ void tcp_server_task(void *pvParameters)
             close(sock);
             vTaskDelay(100);
             SL_setState(SL_WAIT_FOR_CONNECTION_TO_DEVICE);
+            sending_sensors_data_flag = 0;
         }
     }
     vTaskDelete(NULL);
@@ -286,7 +291,7 @@ void i2c_master_init(void)
 
 static json_defs_t jparser(char *data, uint16_t length)
 {
-#define MAX_TOKEN_LENGTH 255
+#define MAX_TOKEN_LENGTH 300
     jsmn_parser parser;
     jsmntok_t tokens[MAX_TOKEN_LENGTH];
     jsmn_init(&parser);
@@ -389,22 +394,62 @@ static json_defs_t jparser(char *data, uint16_t length)
 //         printf("i2c timeout\n");
 // }
 
-void show_angles_task(void *params)
-{
-    vTaskDelay(2000 / portTICK_RATE_MS);
-    while (1)
-    {
-        ESP_LOGI(TAG, "Yaw %f", EC_getYaw());
-        ESP_LOGI(TAG, "Pitch %f", EC_getPitch());
-        ESP_LOGI(TAG, "Roll %f", EC_getRoll());
-        vTaskDelay(1000 / portTICK_RATE_MS);
-    }
-}
+// void show_angles_task(void *params)
+// {
+//     vTaskDelay(2000 / portTICK_RATE_MS);
+//     while (1)
+//     {
+//         ESP_LOGI(TAG, "Yaw %f", EC_getYaw());
+//         ESP_LOGI(TAG, "Pitch %f", EC_getPitch());
+//         ESP_LOGI(TAG, "Roll %f", EC_getRoll());
+//         vTaskDelay(1000 / portTICK_RATE_MS);
+//     }
+// }
 
 void find_path_task(void *params)
 {
     ESP_LOGI(TAG, "path founded? %d", lpa_compute_path());
     vTaskDelete(NULL);
+}
+
+static void sending_sensors_data_task(void *params)
+{
+    vTaskDelay(2000 / portTICK_RATE_MS);
+    while (1)
+    {
+        if (sending_sensors_data_flag)
+        {
+            if (sock > 0)
+            {
+                char tx_buff[450]; // = "{\"response\":{\"action\":\"sensors_data\",\"data\":{\"coordinates\":\"10:10\",\"yaw\":2.4,\"accel_data\":3.2,\"charge\":50}}}";
+
+                jwOpen((char *)tx_buff, sizeof(tx_buff), JW_OBJECT, JW_COMPACT);
+                    jwObj_object("response");
+                        jwObj_string("action", "sensors_data");
+                        jwObj_object("data");
+                            jwObj_string("coordinates", "10:10");
+                            jwObj_double("yaw", EC_getYaw());
+                            jwObj_double("accel_data", EC_getAccelZ());
+                            jwObj_double("charge", 40);
+                        jwEnd();
+                    jwEnd();
+                int json_error = jwClose();
+                if (json_error != JWRITE_OK)
+                {
+                    ESP_LOGE(TAG, "JSON error  %s", jwErrorToString(json_error));
+                }
+                
+                // ESP_LOGI(TAG, "JSON String %s", tx_buff);
+                int err = send(sock, tx_buff, strlen(tx_buff), 0);
+                if (err < 0)
+                {
+                    ESP_LOGE(TAG, "Error occured during sending: errno %d", errno);
+                }
+                
+            }
+        }
+        vTaskDelay(300 / portTICK_RATE_MS);
+    }
 }
 
 void app_main()
@@ -426,10 +471,11 @@ void app_main()
 
     initialise_wifi();
     i2c_master_init();
-    ESP_LOGI(TAG, "lpa init code: %d", lpa_init(20, 20, 2, 1, 16, 18));
+    ESP_LOGI(TAG, "lpa init code: %d", lpa_init(20, 20, 0, 0));
 
     xTaskCreate(EC_ecTask, "EC_ecTask", 8192, NULL, 6, NULL);
-    xTaskCreate(find_path_task,"find_path", 40960, NULL, 6, NULL);
-    xTaskCreate(show_angles_task, "show_angles_task", 2048, NULL, 2, NULL);
+    // xTaskCreate(find_path_task, "find_path", 40960, NULL, 6, NULL);
+    // xTaskCreate(show_angles_task, "show_angles_task", 2048, NULL, 2, NULL);
+    xTaskCreate(sending_sensors_data_task, "sending_sensors_data_task", 6144, NULL, 3, NULL);
     wait_for_ip();
 }
