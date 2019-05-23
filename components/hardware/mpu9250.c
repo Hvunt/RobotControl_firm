@@ -266,7 +266,7 @@ void MPU_SetAccelSR(uint8_t scale)
 
 void MPU_WakeUp(void)
 {
-	MPU_WriteData(MPU9250_ID_ACCELGYR, MPU9250_PWR_MGMT_1, 0x00);
+	MPU_WriteData(MPU9250_ID_ACCELGYR, MPU9250_PWR_MGMT_1, 0x01);
 }
 
 void MPU_FallAsleep(void)
@@ -282,6 +282,10 @@ uint8_t MPU_ReadAccelGyroID(void)
 uint8_t MPU_ReadMagID(void)
 {
 	return MPU_ReadData(MPU9250_ID_MAGNET, MPU9250_MAG_CONFIG_WIA);
+}
+
+void MPU_Reset(void){
+	MPU_WriteData(MPU9250_ID_ACCELGYR, MPU9250_PWR_MGMT_1, 0x80);
 }
 
 void MPU_GetAccelOffset(float * accel_offset)
@@ -424,9 +428,12 @@ void MPU_CalibrateMag(void)
 
 void MPU_Init(void)
 {
+	MPU_Reset();
+	vTaskDelay(10);
 	MPU_WakeUp();
 	vTaskDelay(10);
 	MPU_WriteData(MPU9250_ID_ACCELGYR, 0x37, 0x02); //enable magnetometer
+	ESP_LOGI("MPU9250", "%d", MPU_ReadData(MPU9250_ID_ACCELGYR, 0x37));
 }
 
 void MPU_Error_handler(void)

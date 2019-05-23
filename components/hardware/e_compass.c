@@ -26,11 +26,27 @@ float EC_getYaw(void)
     return yaw;
 }
 
+float EC_getAccelX(void)
+{
+    return MPU_GetAccel_X() / aRes * 9.81f;
+}
+
+float EC_getAccelY(void)
+{
+    return MPU_GetAccel_Y() / aRes * 9.81f;
+}
+
+float EC_getAccelZ(void)
+{
+    return MPU_GetAccel_Z() / aRes * 9.81f;
+}
+
 void EC_ecTask(void *data)
 {
     /*getting calibrated data etc.*/
     MPU_Init();
-    vTaskDelay(10);
+    vTaskDelay(10 / portTICK_RATE_MS);
+    
     while (1)
     {
 
@@ -39,8 +55,12 @@ void EC_ecTask(void *data)
         int16_t mag_raw[3];
 
         MPU_GetAccel(accel_raw);
+        // ESP_LOGI(EC_TAG, "I AM HERE");
         MPU_GetGyro(gyro_raw);
+        // ESP_LOGI(EC_TAG, "AND NOW HERE");
         MPU_GetMag(mag_raw);
+        // ESP_LOGI(EC_TAG, "AAAND HERE");
+        
 
         float ax = accel_raw[0] / aRes * 9.81f;
         float ay = accel_raw[1] / aRes * 9.81f;
@@ -78,6 +98,6 @@ void EC_ecTask(void *data)
 
         // // x axis of accel is NORTH, y is EAST, -z is DOWN
         // MadgwickAHRSupdate(gx, gy, -gz, ax, ay, -az, my, mx, mz); 
-        // vTaskDelay(10);
+        vTaskDelay(1 / portTICK_RATE_MS);
     }
 }

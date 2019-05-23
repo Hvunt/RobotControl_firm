@@ -3,7 +3,6 @@
 # project subdirectory.
 #
 
-PROJECT_NAME := smart_config
+PROJECT_NAME := robot_control
 
 include $(IDF_PATH)/make/project.mk
-

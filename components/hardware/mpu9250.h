@@ -18,6 +18,9 @@ extern "C" {
 #include "esp_log.h"
 #include "esp_err.h"
 
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+
 /*------===REGISTER MAP===------*/
 
 /*----------ID------------*/
@@ -130,9 +133,9 @@ uint8_t MPU_ReadAccelGyroID(void);
 uint8_t MPU_ReadMagID(void);
 void MPU_GetAccelOffset(float * accel_offset);
 void MPU_CalibrateMag(void);
-void MPU_Init(/*I2C_HandleTypeDef * hi2c*/);
+void MPU_Reset(void);
+void MPU_Init(void);
 void MPU_Error_handler(void);
-//void I2C_ClearBusyFlag(I2C_HandleTypeDef *i2c);
 
 #ifdef __cplusplus
 }

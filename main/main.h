@@ -20,6 +20,9 @@ extern "C" {
 #include "tcpip_adapter.h"
 #include "esp_smartconfig.h"
 
+#include "jsmn.h"
+#include "jWrite.h"
+
 #include "lwip/err.h"
 #include "lwip/sockets.h"
 #include "lwip/sys.h"
@@ -27,10 +30,21 @@ extern "C" {
 
 #include "driver/i2c.h"
 
-#include "motor_defs.h"
+#include "status_led.h"
 #include "e_compass.h"
+#include "lpa.h"
+#include "slave_mcu.h"
+#include "json_defs.h"
 
 #include "configs.h"
+
+void smartconfig_task(void *parm);
+void tcp_server_task(void *pvParameters);
+void find_path_task(void *params);
+
+void i2c_master_init(void);
+// void i2c_send(char *data);
+void show_angles_task(void *params);
 
 #ifdef __cplusplus
 }
