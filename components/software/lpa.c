@@ -1,11 +1,13 @@
 
 #include "lpa.h"
 
-node_t *current_node;
+static node_t *current_node;
 
-PQ_list_t *queue;
-node_t *map;
-list_t *path;
+static PQ_list_t *queue;
+static node_t *map;
+static list_t *path;
+
+static int x_current = 0, y_current = 0;
 
 static int x_MAX, y_MAX;
 
@@ -16,21 +18,21 @@ static void update_node(node_t *node, node_t *goal_node);
 static void make_path(node_t *goal);
 
 static void map_init(node_t *map_, int x_MAX, int y_MAX);
-static node_t * get_node_coord(int x, int y);
+static node_t *get_node_coord(int x, int y);
 static float get_cost(node_t *from, node_t *to);
 static void calc_key(float *key, node_t *current_node, node_t *goal_node);
 
-int lpa_init(int _x_MAX, int _y_MAX, int x_START, int y_START)
+int lpa_init(int _x_MAX, int _y_MAX/*, int x_START, int y_START*/)
 {
     x_MAX = _x_MAX;
     y_MAX = _y_MAX;
 
     // сделать проверку на максимально возможный размер карты
-    map = (node_t *)calloc(x_MAX * y_MAX, sizeof(node_t)); 
+    map = (node_t *)calloc(x_MAX * y_MAX, sizeof(node_t));
 
     map_init(map, x_MAX, y_MAX);
 
-    current_node = get_node_coord(x_START, y_START);
+    current_node = get_node_coord(x_current, y_current);
     if (current_node == NULL)
         return LPA_INIT_POINT_ERROR;
     current_node->rhs = 0;
@@ -38,7 +40,7 @@ int lpa_init(int _x_MAX, int _y_MAX, int x_START, int y_START)
 
     // goal_node->isObstacle = false; //!!!!!!!!!!! ONLY FOR TEST!!!!!!!!!
 
-    if (current_node->isObstacle/* || goal_node->isObstacle*/)
+    if (current_node->isObstacle /* || goal_node->isObstacle*/)
         return LPA_INIT_POINT_IS_OBSTACLE;
 
     return LPA_INIT_OK;
@@ -48,7 +50,8 @@ int lpa_init(int _x_MAX, int _y_MAX, int x_START, int y_START)
 int lpa_compute_path(int goalX, int goalY)
 {
     node_t *goal_node = get_node_coord(goalX, goalY);
-    if (goal_node == NULL) return -1;
+    if (goal_node == NULL)
+        return -1;
     float key_[2];
     calc_key(key_, current_node, goal_node);
     PQ_push(&queue, key_, current_node);
@@ -74,7 +77,7 @@ int lpa_compute_path(int goalX, int goalY)
                     successors = successors->next;
                 }
             }
-            free(successors);
+            list_free(&successors);
         }
         else
         {
@@ -90,7 +93,7 @@ int lpa_compute_path(int goalX, int goalY)
                     successors = successors->next;
                 }
             }
-            free(successors);
+            list_free(&successors);
         }
 
         top_key = PQ_getTopKey(queue);
@@ -100,18 +103,36 @@ int lpa_compute_path(int goalX, int goalY)
         }
 
         calc_key(goal_key, goal_node, goal_node);
+        
     }
+    // ESP_LOGI("LPA_TAG", "LPA_CHECK %d", heap_caps_check_integrity(MALLOC_CAP_8BIT, true));
     make_path(goal_node);
-    print_map(goal_node);
-    current_node = goal_node;
+    // print_map(goal_node);
+    // current_node = goal_node;
+    x_current = goal_node->x;
+    y_current = goal_node->y;
+
+    free(current_node);
     return 1;
 }
 
 void lpa_get_current_coords(char *data)
 {
-    int x = current_node->x;
-    int y = current_node->y;
-    sprintf(data, "%d:%d", x, y);
+    sprintf(data, "%d:%d", x_current, y_current);
+}
+
+void lpa_free(void)
+{
+    if (map)
+    {
+        // for (uint8_t i = 0; i < x_MAX * y_MAX; i++)
+        // {
+            // free(&(map + i));
+            // &map[i] = NULL;
+        // }
+        free(map);
+    }
+    list_free(&path);
 }
 
 static void update_node(node_t *node, node_t *goal_node)
@@ -130,7 +151,7 @@ static void update_node(node_t *node, node_t *goal_node)
                 predecessors = predecessors->next;
             }
         }
-        free(predecessors);
+        list_free(&predecessors);
     }
     if (PQ_contains(queue, node))
     {
@@ -146,7 +167,7 @@ static void update_node(node_t *node, node_t *goal_node)
 
 static node_t *get_node_coord(int x, int y)
 {
-    for (int i = 0; i <= x_MAX * y_MAX; i++)
+    for (int i = 0; i < x_MAX * y_MAX; i++)
         if (map[i].x == x && map[i].y == y)
             return &map[i];
     return NULL;

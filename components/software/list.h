@@ -21,5 +21,6 @@ struct l
 typedef struct l list_t;
 
 void list_add(list_t **list, node_t *node);
+void list_free(list_t **list);
 
 #endif
