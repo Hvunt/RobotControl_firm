@@ -19,7 +19,7 @@ extern "C" {
 #include "nvs_flash.h"
 #include "tcpip_adapter.h"
 #include "esp_smartconfig.h"
-#include "esp_heap_trace.h"
+// #include "esp_heap_trace.h"
 
 #include "jsmn.h"
 #include "jWrite.h"

@@ -9,8 +9,8 @@
 
 #include "main.h"
 
-#define NUM_RECORDS 200
-static heap_trace_record_t trace_record[NUM_RECORDS]; // This buffer must be in internal RAM
+// #define NUM_RECORDS 300
+// static heap_trace_record_t trace_record[NUM_RECORDS]; // This buffer must be in internal RAM
 
 #define PORT 80
 
@@ -248,7 +248,7 @@ void tcp_server_task(void *pvParameters)
                             int goal[2];
                             sscanf(request.coordinates, "%d:%d", &goal[0], &goal[1]);
                             ESP_LOGI(TAG, "Requested coordinates: %d, %d", goal[0], goal[1]);
-                            xTaskCreate(find_path_task, "lpa_task", 65536, (void *) goal, 6, NULL);                            
+                            xTaskCreate(find_path_task, "lpa_task", 40960, (void *) goal, 8, NULL);                            
                         }
                     }
                     ESP_LOGI(TAG, "App request: %s", request.action);
@@ -423,20 +423,24 @@ static json_defs_t jparser(char *data, uint16_t length)
 
 void find_path_task(void * parameters)
 {
-    // configASSERT( ( ( int *) parameters ) == 1 );
     int *goal = (int*)parameters;
-    ESP_ERROR_CHECK( heap_trace_start(HEAP_TRACE_LEAKS) );
-    ESP_LOGI(TAG, "Free heap: %d", xPortGetFreeHeapSize());
-    ESP_LOGI(TAG, "lpa init code: %d", lpa_init(20, 20));
-    ESP_LOGI(TAG, "Free heap: %d", xPortGetFreeHeapSize());
-    ESP_LOGI(TAG, "Path founded: %d",lpa_compute_path(goal[0], goal[1]));
-    ESP_LOGI(TAG, "Free heap: %d", xPortGetFreeHeapSize());
-    ESP_ERROR_CHECK( heap_trace_stop() );
-    heap_trace_dump();
+    // ESP_ERROR_CHECK( heap_trace_start(HEAP_TRACE_LEAKS) );
+    ESP_LOGI(TAG, "Free heap1: %d", xPortGetFreeHeapSize());
+    // node_t * map = (node_t *)calloc(25, sizeof(node_t));
+    node_t map[20*20];
+    ESP_LOGI(TAG, "lpa init code: %d", lpa_init(map, 20, 20));
+    ESP_LOGI(TAG, "Free heap2: %d", xPortGetFreeHeapSize());
+    ESP_LOGI(TAG, "Path founded: %d",lpa_compute_path(map, goal[0], goal[1]));
+    ESP_LOGI(TAG, "Free heap3: %d", xPortGetFreeHeapSize());
+    // ESP_ERROR_CHECK( heap_trace_stop() );
+    // heap_trace_dump();
     char coordinates[5];
     lpa_get_current_coords(coordinates);
     ESP_LOGI(TAG, "Current coordinates is %s", coordinates);
+    // free(map);
+    ESP_LOGI(TAG, "Free heap4: %d", xPortGetFreeHeapSize());
     lpa_free();
+    ESP_LOGI(TAG, "Free heap5: %d", xPortGetFreeHeapSize());
     vTaskDelete(NULL);
 }
 
@@ -492,7 +496,7 @@ void app_main()
         err = nvs_flash_init();
     }
     ESP_ERROR_CHECK(err);
-    ESP_ERROR_CHECK( heap_trace_init_standalone(trace_record, NUM_RECORDS) );
+    // ESP_ERROR_CHECK( heap_trace_init_standalone(trace_record, NUM_RECORDS) );
 
     SL_init();
     SL_setState(SL_INIT);
