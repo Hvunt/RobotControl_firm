@@ -428,18 +428,20 @@ void find_path_task(void * parameters)
     ESP_LOGI(TAG, "Free heap1: %d", xPortGetFreeHeapSize());
     // node_t * map = (node_t *)calloc(25, sizeof(node_t));
     node_t map[20*20];
-    ESP_LOGI(TAG, "lpa init code: %d", lpa_init(map, 20, 20));
+    PQ_list_t *queue = NULL;
+    list_t *path = NULL;
+
+    ESP_LOGI(TAG, "lpa init code: %d", lpa_init(map, queue, 20, 20));
     ESP_LOGI(TAG, "Free heap2: %d", xPortGetFreeHeapSize());
-    ESP_LOGI(TAG, "Path founded: %d",lpa_compute_path(map, goal[0], goal[1]));
+    ESP_LOGI(TAG, "Path founded: %d",lpa_compute_path(map, queue, path, goal[0], goal[1]));
     ESP_LOGI(TAG, "Free heap3: %d", xPortGetFreeHeapSize());
     // ESP_ERROR_CHECK( heap_trace_stop() );
     // heap_trace_dump();
     char coordinates[5];
     lpa_get_current_coords(coordinates);
     ESP_LOGI(TAG, "Current coordinates is %s", coordinates);
-    // free(map);
     ESP_LOGI(TAG, "Free heap4: %d", xPortGetFreeHeapSize());
-    lpa_free();
+    lpa_free(queue, path);
     ESP_LOGI(TAG, "Free heap5: %d", xPortGetFreeHeapSize());
     vTaskDelete(NULL);
 }

@@ -1,11 +1,11 @@
 
 #include "lpa.h"
 
-static node_t *current_node;
+// static node_t *current_node;
 
-static PQ_list_t *queue;
+// static PQ_list_t *queue;
+// static list_t *path;
 // node_t *map;
-static list_t *path;
 
 static int x_current = 0, y_current = 0;
 
@@ -14,54 +14,68 @@ static int x_MAX, y_MAX;
 static void get_predecessors(node_t *map, list_t **pred_list, node_t *current_node);
 static void get_successors(node_t *map, list_t **suc_list, node_t *current_node);
 static node_t *get_min_pred(node_t *map, node_t *current_node);
-static void update_node(node_t *map, node_t *node, node_t *goal_node);
-static void make_path(node_t *map, node_t *goal);
+// static void update_node(node_t *map, node_t *node, node_t *goal_node);
+// static void update_node(node_t *map, node_t *current_node, node_t *node, node_t *goal_node);
+static void update_node(node_t *map, PQ_list_t *queue, node_t *current_node, node_t *node, node_t *goal_node);
+// static void make_path(node_t *map, node_t *goal);
+// static void make_path(node_t *map, node_t *current_node, node_t *goal);
+static void make_path(node_t *map, list_t *path, node_t *current_node, node_t *goal);
 
 static void map_init(node_t *map, int x_MAX, int y_MAX);
 static node_t *get_node_coord(node_t *map, int x, int y);
 static float get_cost(node_t *from, node_t *to);
 static void calc_key(float *key, node_t *current_node, node_t *goal_node);
 
-int lpa_init(node_t *map, int _x_MAX, int _y_MAX /*, int x_START, int y_START*/)
+
+
+int lpa_init(node_t *map, PQ_list_t *queue, int _x_MAX, int _y_MAX)
 {
     x_MAX = _x_MAX;
     y_MAX = _y_MAX;
 
-    // сделать проверку на максимально возможный размер карты
-    // map = (node_t *)calloc(x_MAX * y_MAX, sizeof(node_t));
-
     map_init(map, x_MAX, y_MAX);
 
-    current_node = get_node_coord(map, x_current, y_current);
-    if (current_node == NULL)
-        return LPA_INIT_POINT_ERROR;
-    current_node->rhs = 0;
     // current_node->isObstacle = false; //!!!!!!!!!!! ONLY FOR TEST!!!!!!!!!
 
     // goal_node->isObstacle = false; //!!!!!!!!!!! ONLY FOR TEST!!!!!!!!!
 
-    if (current_node->isObstacle /* || goal_node->isObstacle*/)
-        return LPA_INIT_POINT_IS_OBSTACLE;
+    // if (current_node->isObstacle /* || goal_node->isObstacle*/)
+    //     return LPA_INIT_POINT_IS_OBSTACLE;
 
     return LPA_INIT_OK;
 }
 
 // int lpa_compute_path(node_t *goal_node)
-int lpa_compute_path(node_t *map, int goalX, int goalY)
+int lpa_compute_path(node_t *map, PQ_list_t *queue, list_t *path, int goalX, int goalY)
 {
+    node_t *current_node = get_node_coord(map, x_current, y_current);
+    
+    if (current_node == NULL)
+        return LPA_INIT_POINT_ERROR;
+    current_node->rhs = 0;
+    
+    if (current_node->isObstacle /* || goal_node->isObstacle*/)
+        return LPA_INIT_POINT_IS_OBSTACLE;
+
     ESP_LOGI("LPA_CHECK", "POINT_1");
+    
     node_t *goal_node = get_node_coord(map, goalX, goalY);
     if (goal_node == NULL)
         return -1;
     ESP_LOGI("LPA_CHECK", "POINT_2");
+
     float key_[2];
     calc_key(key_, current_node, goal_node);
+
     ESP_LOGI("LPA_CHECK", "POINT_3");
+
     PQ_push(&queue, key_, current_node);
     ESP_LOGI("LPA_CHECK", "POINT_4");
+
     float *top_key = PQ_getTopKey(queue), goal_key[2];
     calc_key(goal_key, goal_node, goal_node);
     ESP_LOGI("LPA_CHECK", "POINT_5");
+
     while ((top_key[0] < goal_key[0] && top_key[1] < goal_key[1]) || (goal_node->rhs != goal_node->g))
     {
         node_t *node = PQ_pop(&queue);
@@ -76,7 +90,7 @@ int lpa_compute_path(node_t *map, int goalX, int goalY)
             {
                 while (successors != NULL)
                 {
-                    update_node(map, successors->nodes, goal_node);
+                    update_node(map, queue, current_node, successors->nodes, goal_node);
                     successors = successors->next;
                 }
             }
@@ -93,7 +107,7 @@ int lpa_compute_path(node_t *map, int goalX, int goalY)
             {
                 while (successors != NULL)
                 {
-                    update_node(map, successors->nodes, goal_node);
+                    update_node(map, queue, current_node, successors->nodes, goal_node);
                     successors = successors->next;
                 }
             }
@@ -110,9 +124,9 @@ int lpa_compute_path(node_t *map, int goalX, int goalY)
         calc_key(goal_key, goal_node, goal_node);
     }
     // ESP_LOGI("LPA_TAG", "LPA_CHECK %d", heap_caps_check_integrity(MALLOC_CAP_8BIT, true));
-    make_path(map, goal_node);
+    make_path(map, path, current_node, goal_node);
     ESP_LOGI("LPA_CHECK", "POINT_9");
-    print_map(map, goal_node);
+    print_map(map, current_node, goal_node);
     // current_node = goal_node;
     x_current = goal_node->x;
     y_current = goal_node->y;
@@ -127,7 +141,7 @@ void lpa_get_current_coords(char *data)
     sprintf(data, "%d:%d", x_current, y_current);
 }
 
-void lpa_free(void)
+void lpa_free(PQ_list_t *queue, list_t *path)
 {
     // if (map)
     // {
@@ -138,10 +152,11 @@ void lpa_free(void)
     //     // }
     //     free(map);
     // }
+    PQ_free(&queue);
     list_free(&path);
 }
 
-static void update_node(node_t *map, node_t *node, node_t *goal_node)
+static void update_node(node_t *map, PQ_list_t *queue, node_t *current_node, node_t *node, node_t *goal_node)
 {
     if (node != current_node)
     {
@@ -234,7 +249,7 @@ static node_t *get_min_pred(node_t *map, node_t *from_node)
     return min_node;
 }
 
-static void make_path(node_t *map, node_t *goal)
+static void make_path(node_t *map, list_t *path, node_t *current_node, node_t *goal)
 {
     node_t *node = get_min_pred(map, goal);
     node_t *prev_node = goal;
@@ -288,7 +303,7 @@ static void calc_key(float *key, node_t *from_node, node_t *goal_node)
     key[1] = fmin(from_node->rhs, from_node->g);
 }
 
-void print_map(node_t *map, node_t *goal_node)
+void print_map(node_t *map, node_t *current_node, node_t *goal_node)
 {
     printf("==========================>Y\n");
     printf("||");

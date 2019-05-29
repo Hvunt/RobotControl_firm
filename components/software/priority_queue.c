@@ -154,3 +154,17 @@ long PQ_SizeOfQueue(PQ_list_t *list)
     }
     return size;
 }
+
+void PQ_free(PQ_list_t **list)
+{
+    if (*list != NULL)
+    {
+        PQ_list_t *prev = *list;
+        while (*list)
+        {
+            *list = (*list)->next;
+            free(prev);
+            prev = *list;
+        }
+    }
+}
