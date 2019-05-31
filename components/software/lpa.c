@@ -1,12 +1,9 @@
 
 #include "lpa.h"
 
-// static node_t *current_node;
+static const char *TAG = "LPA";
 
-// static PQ_list_t *queue;
-// static list_t *path;
-// node_t *map;
-node_t map[20*20];
+node_t map[50*50];
 static int x_current = 0, y_current = 0;
 
 static int x_MAX, y_MAX;
@@ -14,11 +11,7 @@ static int x_MAX, y_MAX;
 static void get_predecessors(node_t *map, list_t **pred_list, node_t *current_node);
 static void get_successors(node_t *map, list_t **suc_list, node_t *current_node);
 static node_t *get_min_pred(node_t *map, node_t *current_node);
-// static void update_node(node_t *map, node_t *node, node_t *goal_node);
-// static void update_node(node_t *map, node_t *current_node, node_t *node, node_t *goal_node);
 static void update_node(node_t *map, PQ_list_t **queue, node_t *current_node, node_t *node, node_t *goal_node);
-// static void make_path(node_t *map, node_t *goal);
-// static void make_path(node_t *map, node_t *current_node, node_t *goal);
 static void make_path(node_t *map, list_t *path, node_t *current_node, node_t *goal);
 
 static void map_init(node_t *map, int x_MAX, int y_MAX);
@@ -43,8 +36,7 @@ int lpa_init(/*node_t *map,*/ int _x_MAX, int _y_MAX)
     return LPA_OK;
 }
 
-// int lpa_compute_path(node_t *goal_node)
-int lpa_compute_path(/*node_t *map,*/ PQ_list_t *queue, list_t *path, int goalX, int goalY)
+int lpa_compute_path( PQ_list_t *queue, list_t *path, int goalX, int goalY)
 {
     node_t *current_node = get_node_coord(map, x_current, y_current);
 
@@ -62,7 +54,7 @@ int lpa_compute_path(/*node_t *map,*/ PQ_list_t *queue, list_t *path, int goalX,
     calc_key(key_, current_node, goal_node);
 
     PQ_push(&queue, key_, current_node);
-
+    
     float *top_key = PQ_getTopKey(queue), goal_key[2];
     calc_key(goal_key, goal_node, goal_node);
 
@@ -80,10 +72,10 @@ int lpa_compute_path(/*node_t *map,*/ PQ_list_t *queue, list_t *path, int goalX,
                 while (successors != NULL)
                 {
                     update_node(map, &queue, current_node, successors->nodes, goal_node);
+                    free(successors);
                     successors = successors->next;
                 }
             }
-            list_free(&successors);
         }
         else
         {
@@ -95,10 +87,10 @@ int lpa_compute_path(/*node_t *map,*/ PQ_list_t *queue, list_t *path, int goalX,
                 while (successors != NULL)
                 {
                     update_node(map, &queue, current_node, successors->nodes, goal_node);
+                    free(successors);
                     successors = successors->next;
                 }
             }
-            list_free(&successors);
         }
         top_key = PQ_getTopKey(queue);
         if (top_key == NULL)
@@ -110,9 +102,10 @@ int lpa_compute_path(/*node_t *map,*/ PQ_list_t *queue, list_t *path, int goalX,
     }
     make_path(map, path, current_node, goal_node);
     print_map(map, current_node, goal_node);
+    
     x_current = goal_node->x;
     y_current = goal_node->y;
-
+    lpa_free(queue, path);
     return LPA_OK;
 }
 
@@ -140,10 +133,10 @@ static void update_node(node_t *map, PQ_list_t **queue, node_t *current_node, no
             {
                 float min = fmin(node->rhs, predecessors->nodes->g + get_cost(predecessors->nodes, node));
                 node->rhs = min;
+                free(predecessors);
                 predecessors = predecessors->next;
             }
         }
-        list_free(&predecessors);
     }
     if (PQ_contains(*queue, node))
     {

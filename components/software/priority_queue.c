@@ -143,7 +143,7 @@ PQ_list_t *PQ_mergeLists(PQ_list_t *l, PQ_list_t *r)
     return dummy_head.next;
 }
 
-long PQ_SizeOfQueue(PQ_list_t *list)
+int PQ_SizeOfQueue(PQ_list_t *list)
 {
     int size = 0;
     PQ_list_t *temp = list;

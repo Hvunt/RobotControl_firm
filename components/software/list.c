@@ -9,6 +9,18 @@ void list_add(list_t **list, node_t *node)
     *list = new_node;
 }
 
+int list_get_length(list_t *list)
+{
+    int length = 0;
+    list_t *prev = list;
+    while (prev != NULL)
+    {
+        length++;
+        prev = prev->next;
+    }
+    return length;
+}
+
 void list_free(list_t **list)
 {
     if (*list != NULL)

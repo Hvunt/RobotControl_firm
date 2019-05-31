@@ -2,6 +2,7 @@
 #define PRIORITY_QUEUE
 
 #include "node.h"
+#include "esp_log.h"
 
 typedef struct list
 {
@@ -19,6 +20,6 @@ PQ_list_t *PQ_getMiddle(PQ_list_t *head);
 PQ_list_t *PQ_mergeLists(PQ_list_t *l, PQ_list_t *r);
 void PQ_remove(PQ_list_t **list, node_t *node);
 int PQ_contains(PQ_list_t *list, node_t *node);
-long PQ_SizeOfQueue(PQ_list_t *list);
+int PQ_SizeOfQueue(PQ_list_t *list);
 void PQ_free(PQ_list_t **list);
 #endif // PRIORITY_QUEUE
