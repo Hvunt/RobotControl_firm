@@ -425,25 +425,35 @@ void find_path_task(void * parameters)
 {
     int *goal = (int*)parameters;
     // ESP_ERROR_CHECK( heap_trace_start(HEAP_TRACE_LEAKS) );
-    ESP_LOGI(TAG, "Free heap1: %d", xPortGetFreeHeapSize());
+    ESP_LOGI(TAG, "Free heap1: %d", esp_get_free_heap_size());
     // node_t * map = (node_t *)calloc(25, sizeof(node_t));
-    node_t map[20*20];
+    // node_t map[20*20];
     PQ_list_t *queue = NULL;
     list_t *path = NULL;
-
-    ESP_LOGI(TAG, "lpa init code: %d", lpa_init(map, queue, 20, 20));
-    ESP_LOGI(TAG, "Free heap2: %d", xPortGetFreeHeapSize());
-    ESP_LOGI(TAG, "Path founded: %d",lpa_compute_path(map, queue, path, goal[0], goal[1]));
-    ESP_LOGI(TAG, "Free heap3: %d", xPortGetFreeHeapSize());
+    // ESP_LOGI(TAG, "size of map %d", sizeof(map));
+    ESP_LOGI(TAG, "lpa init code: %d", lpa_init(20, 20));
+    // ESP_LOGI(TAG, "Free heap2: %d", xPortGetFreeHeapSize());
+    ESP_LOGI(TAG, "Path founded? %d", lpa_compute_path(queue, path, goal[0], goal[1]));
+    // ESP_LOGI(TAG, "Free heap3: %d", xPortGetFreeHeapSize());
     // ESP_ERROR_CHECK( heap_trace_stop() );
     // heap_trace_dump();
     char coordinates[5];
     lpa_get_current_coords(coordinates);
     ESP_LOGI(TAG, "Current coordinates is %s", coordinates);
-    ESP_LOGI(TAG, "Free heap4: %d", xPortGetFreeHeapSize());
+    ESP_LOGI(TAG, "Free heap4: %d", esp_get_free_heap_size());
     lpa_free(queue, path);
-    ESP_LOGI(TAG, "Free heap5: %d", xPortGetFreeHeapSize());
+    ESP_LOGI(TAG, "Free heap5: %d", esp_get_free_heap_size());
     vTaskDelete(NULL);
+}
+
+void free_heap_task(void *param)
+{
+    vTaskDelay(5000 / portTICK_RATE_MS);
+    while (1)
+    {
+        ESP_LOGI(TAG, "Free heap task: %d", esp_get_free_heap_size());
+        vTaskDelay(1000 / portTICK_RATE_MS);
+    }
 }
 
 static void sending_sensors_data_task(void *params)
@@ -508,6 +518,7 @@ void app_main()
     i2c_master_init();
 
     xTaskCreate(EC_ecTask, "EC_ecTask", 8192, NULL, 6, NULL);
+    xTaskCreate(free_heap_task, "free_heap_task", 2048, NULL, 5, NULL);
     // xTaskCreate(find_path_task, "find_path", 40960, NULL, 6, NULL);
     // xTaskCreate(show_angles_task, "show_angles_task", 2048, NULL, 2, NULL);
     xTaskCreate(sending_sensors_data_task, "sending_sensors_data_task", 6144, NULL, 3, NULL);
