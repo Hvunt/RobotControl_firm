@@ -30,20 +30,25 @@ void SM_init()
 
 void SM_sending_task(void *params)
 {
-    uint8_t i = 0;
-    while (1)
-    {
-        uint8_t buffer[10];
-        buffer[0] = COMM_SET_SERVOS_POS;
-        buffer[1] = 1;
-        buffer[2] = i;
-        esp_err_t ret = i2c_master_write_test(I2C_MASTER_NUM, buffer, sizeof(buffer));
-        if (ret != ESP_OK)
-            ESP_LOGE("SM_sending_task", "%s", esp_err_to_name(ret));
-        // ESP_ERROR_CHECK(ret);
-        i++;
-        if (i == 180)
-            i = 0;
-        vTaskDelay(20);
-    }
+    uint8_t * buffer = (uint8_t *)params;
+    esp_err_t ret = i2c_master_write_test(I2C_MASTER_NUM, buffer, sizeof(buffer));
+    if (ret != ESP_OK)
+        ESP_LOGE("SM_sending_task", "%s", esp_err_to_name(ret));
+    vTaskDelete(NULL);
+    // uint8_t i = 0;
+    // while (1)
+    // {
+    //     uint8_t buffer[10];
+    //     buffer[0] = COMM_SET_SERVOS_POS;
+    //     buffer[1] = 1;
+    //     buffer[2] = i;
+    //     esp_err_t ret = i2c_master_write_test(I2C_MASTER_NUM, buffer, sizeof(buffer));
+    //     if (ret != ESP_OK)
+    //         ESP_LOGE("SM_sending_task", "%s", esp_err_to_name(ret));
+    //     // ESP_ERROR_CHECK(ret);
+    //     i++;
+    //     if (i == 180)
+    //         i = 0;
+    //     vTaskDelay(20);
+    // }
 }
