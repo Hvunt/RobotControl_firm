@@ -1,11 +1,14 @@
-#ifndef SLAVE_MCU
-#define SLAVE_MCU
+#ifndef SLAVE_MCU_H
+#define SLAVE_MCU_H
 
 #include "configs.h"
 #include "motor_defs.h"
+#include <stdint.h>
 #include "esp_log.h"
 #include "driver/i2c.h"
-#include <stdint.h>
+
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 
 struct slave_mcu
 {
@@ -23,6 +26,7 @@ struct slave_mcu
 typedef struct slave_mcu slave_mcu_t;
 
 void SM_init();
-void SM_sending_task(void *params);
+// void SM_sending_task(void *params);
+void SM_send_command(uint8_t *data);
 
 #endif

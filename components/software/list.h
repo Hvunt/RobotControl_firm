@@ -1,10 +1,8 @@
-#ifndef LIST_H
-#define LIST_H
+#ifndef LIST_PQ_H
+#define LIST_PQ_H
 
-#include "node.h"
 #include <stdlib.h>
-#include "esp_log.h"
-
+#include "node.h"
 // typedef struct l
 // {
 //     node_t *nodes;

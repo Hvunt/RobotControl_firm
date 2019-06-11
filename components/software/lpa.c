@@ -3,21 +3,25 @@
 
 static const char *TAG = "LPA";
 
-node_t map[50*50];
+node_t map[50 * 50];
 static int x_current = 0, y_current = 0;
+static int8_t current_snail = 1;
 
 static int x_MAX, y_MAX;
 
+static int lpa_move(list_t **path);
 static void get_predecessors(node_t *map, list_t **pred_list, node_t *current_node);
 static void get_successors(node_t *map, list_t **suc_list, node_t *current_node);
 static node_t *get_min_pred(node_t *map, node_t *current_node);
 static void update_node(node_t *map, PQ_list_t **queue, node_t *current_node, node_t *node, node_t *goal_node);
-static void make_path(node_t *map, list_t *path, node_t *current_node, node_t *goal);
+static void make_path(node_t *map, list_t **path, node_t *current_node, node_t *goal);
 
 static void map_init(node_t *map, int x_MAX, int y_MAX);
 static node_t *get_node_coord(node_t *map, int x, int y);
 static float get_cost(node_t *from, node_t *to);
 static void calc_key(float *key, node_t *current_node, node_t *goal_node);
+static uint8_t substract_snail(uint8_t current_snail, uint8_t new_snail);
+static void get_direction(int8_t x, int8_t y, uint8_t *direction, uint8_t *value);
 
 int lpa_init(/*node_t *map,*/ int _x_MAX, int _y_MAX)
 {
@@ -36,7 +40,7 @@ int lpa_init(/*node_t *map,*/ int _x_MAX, int _y_MAX)
     return LPA_OK;
 }
 
-int lpa_compute_path( PQ_list_t *queue, list_t *path, int goalX, int goalY)
+int lpa_compute_path(PQ_list_t *queue, list_t *path, int goalX, int goalY)
 {
     node_t *current_node = get_node_coord(map, x_current, y_current);
 
@@ -54,7 +58,7 @@ int lpa_compute_path( PQ_list_t *queue, list_t *path, int goalX, int goalY)
     calc_key(key_, current_node, goal_node);
 
     PQ_push(&queue, key_, current_node);
-    
+
     float *top_key = PQ_getTopKey(queue), goal_key[2];
     calc_key(goal_key, goal_node, goal_node);
 
@@ -100,12 +104,35 @@ int lpa_compute_path( PQ_list_t *queue, list_t *path, int goalX, int goalY)
 
         calc_key(goal_key, goal_node, goal_node);
     }
-    make_path(map, path, current_node, goal_node);
+    make_path(map, &path, current_node, goal_node);
     print_map(map, current_node, goal_node);
-    
-    x_current = goal_node->x;
-    y_current = goal_node->y;
-    lpa_free(queue, path);
+    lpa_free(queue);
+    ESP_LOGI(TAG, "0Path address: %d", (int) path);
+    if (lpa_move(&path) != LPA_OK)
+        return LPA_MOVING_ERROR;
+
+    return LPA_OK;
+}
+
+static int lpa_move(list_t **path)
+{
+    ESP_LOGI(TAG, "1Path address: %d", (int) *path);
+    while (*path != NULL)
+    {
+        uint8_t buffer[10];
+        buffer[0] = COMM_MOVE;
+
+        uint8_t x = (*path)->nodes->x - x_current;
+        uint8_t y = (*path)->nodes->y - y_current;
+        get_direction(x, y, &buffer[1], &buffer[2]);
+        ESP_LOGI(TAG, "buffer 1:%d 2:%d", buffer[1], buffer[2]);
+        SM_send_command(buffer);
+        x_current = (*path)->nodes->x;
+        y_current = (*path)->nodes->y;
+        free(*path);
+        *path = (*path)->next;
+        vTaskDelay(3000 / portTICK_RATE_MS);
+    }
     return LPA_OK;
 }
 
@@ -114,10 +141,10 @@ void lpa_get_current_coords(char *data)
     sprintf(data, "%d:%d", x_current, y_current);
 }
 
-void lpa_free(PQ_list_t *queue, list_t *path)
+void lpa_free(PQ_list_t *queue /*, list_t *path*/)
 {
     PQ_free(&queue);
-    list_free(&path);
+    // list_free(&path);
 }
 
 static void update_node(node_t *map, PQ_list_t **queue, node_t *current_node, node_t *node, node_t *goal_node)
@@ -213,17 +240,88 @@ static node_t *get_min_pred(node_t *map, node_t *from_node)
     return min_node;
 }
 
-static void make_path(node_t *map, list_t *path, node_t *current_node, node_t *goal)
+static void make_path(node_t *map, list_t **path, node_t *current_node, node_t *goal)
 {
     node_t *node = get_min_pred(map, goal);
     node_t *prev_node = goal;
+    ESP_LOGI(TAG, "3Path address: %d", (int) *path);
     while (node != current_node)
     {
-        list_add(&path, node);
+        list_add(path, node);
         node->isPath = true;
         prev_node = node;
         node = get_min_pred(map, prev_node);
     }
+    ESP_LOGI(TAG, "4Path address: %d", (int) *path);
+
+}
+
+static uint8_t substract_snail(uint8_t current_snail, uint8_t new_snail)
+{
+    if (current_snail > new_snail)
+        return current_snail - new_snail;
+    else
+        return -(new_snail - current_snail);
+}
+
+static void get_direction(int8_t x, int8_t y, uint8_t *direction, uint8_t *value)
+{
+    uint8_t snail_next = 0;
+    if (x == 1 && y == 1)
+        snail_next = LPA_DIRECTION_SNAIL_8;
+
+    else if (x == 0 && y == 1)
+        snail_next = LPA_DIRECTION_SNAIL_7;
+
+    else if (x == 1 && y == -1)
+        snail_next = LPA_DIRECTION_SNAIL_6;
+
+    else if (x == 1 && y == 0)
+        snail_next = LPA_DIRECTION_SNAIL_5;
+
+    else if (x == -1 && y == 1)
+        snail_next = LPA_DIRECTION_SNAIL_4;
+
+    else if (x == 0 && y == -1)
+        snail_next = LPA_DIRECTION_SNAIL_3;
+
+    else if (x == -1 && y == 1)
+        snail_next = LPA_DIRECTION_SNAIL_2;
+
+    else if (x == 1 && y == 0)
+        snail_next = LPA_DIRECTION_SNAIL_1;
+
+    int8_t temp = substract_snail(current_snail, snail_next);
+    switch (temp)
+    {
+    case 0:
+        *direction = MOVE_FORWARD;
+        *value = 50;
+        break;
+    case 4:
+    case -4:
+        *direction = MOVE_REVERSE;
+        *value = 50;
+        break;
+    case 1:
+        *direction = MOVE_RIGHT;
+        *value = 45;
+        break;
+    case -1:
+        *direction = MOVE_LEFT;
+        *value = 45;
+        break;
+    case 2:
+        *direction = MOVE_RIGHT;
+        *value = 45;
+        break;
+    case -2:
+        *direction = MOVE_LEFT;
+        *value = 45;
+        break;
+    }
+
+    current_snail = snail_next;
 }
 
 //UTILS

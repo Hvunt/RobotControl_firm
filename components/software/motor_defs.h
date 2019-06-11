@@ -1,4 +1,7 @@
 
+#ifndef MOTORS_DEFS
+#define MOTORS_DEFS
+
 #define MOTORS_FORWARD "FORWARD"
 #define MOTORS_REVERSE "REVERSE"
 #define MOTORS_LEFT "LEFT"
@@ -43,3 +46,5 @@ enum
 	MOVE_RIGHT = 0x22,
 	MOVE_STOP = 0x44
 };
+
+#endif

@@ -373,36 +373,6 @@ static json_defs_t jparser(char *data, uint16_t length)
     return response;
 }
 
-// static void i2c_send(char *data)
-// {
-//     // int ret;
-//     // uint8_t data_buffer[2];
-//     // if (strcmp(data,MOTORS_FORWARD) == 0){
-//     //     data_buffer[0] = COMM_MOVE;
-//     //     data_buffer[1] = MOVE_FORWARD;
-//     // } else if (strcmp(data,MOTORS_REVERSE) == 0)
-//     // {
-//     //     data_buffer[0] = COMM_MOVE;
-//     //     data_buffer[1] = MOVE_REVERSE;
-//     // } else if (strcmp(data,MOTORS_LEFT) == 0)
-//     // {
-//     //     data_buffer[0] = COMM_MOVE;
-//     //     data_buffer[1] = MOVE_LEFT;
-//     // } else if (strcmp(data,MOTORS_RIGHT) == 0)
-//     // {
-//     //     data_buffer[0] = COMM_MOVE;
-//     //     data_buffer[1] = MOVE_RIGHT;
-//     // } else if (strcmp(data,MOTORS_STOP) == 0)
-//     // {
-//     //     data_buffer[0] = COMM_MOVE;
-//     //     data_buffer[1] = MOVE_STOP;
-//     // }
-
-//     ret = i2c_master_write_slave(I2C_MASTER_NUM, data_buffer, sizeof(data_buffer));
-//     if (ret == ESP_ERR_TIMEOUT)
-//         printf("i2c timeout\n");
-// }
-
 // void show_angles_task(void *params)
 // {
 //     vTaskDelay(2000 / portTICK_RATE_MS);
@@ -449,7 +419,9 @@ static void sending_sensors_data_task(void *params)
                     jwObj_object("response");
                         jwObj_string(JSON_TOKEN_NAME_ACTION, JSON_TOKEN_NAME_ACTION_sensors_data);
                         jwObj_object("data");
-                            jwObj_string("coordinates", "10:10");
+                            char coords[5];
+                            lpa_get_current_coords(coords);
+                            jwObj_string("coordinates", coords);
                             jwObj_double("yaw", EC_getYaw());
                             jwObj_double("accel_data", EC_getAccelZ());
                             jwObj_double("charge", 40);

@@ -4,6 +4,9 @@
 extern "C" {
 #endif
 
+#ifndef MAIN_H
+#define MAIN_H
+
 #include <string.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -46,6 +49,8 @@ void find_path_task(void *params);
 void i2c_master_init(void);
 // void i2c_send(char *data);
 void show_angles_task(void *params);
+
+#endif
 
 #ifdef __cplusplus
 }
