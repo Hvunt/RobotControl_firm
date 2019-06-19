@@ -396,7 +396,7 @@ void find_path_task(void * parameters)
     int *goal = (int*)parameters;
     PQ_list_t *queue = NULL;
     list_t *path = NULL;
-    ESP_LOGI(TAG, "lpa init code: %d", lpa_init(50, 50));
+    ESP_LOGI(TAG, "lpa init code: %d", lpa_init(25, 25));
     ESP_LOGI(TAG, "Path founded? %d", lpa_compute_path(queue, path, goal[0], goal[1]));
     char coordinates[5];
     lpa_get_current_coords(coordinates);

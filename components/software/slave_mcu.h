@@ -25,8 +25,15 @@ struct slave_mcu
 
 typedef struct slave_mcu slave_mcu_t;
 
+enum {
+    SM_ERROR = 0xF0,
+    SM_CONNECTION_ERROR,
+    SM_NOT_RESPOND_ERROR,
+    SM_OK = 0x0F
+};
+
 void SM_init();
 // void SM_sending_task(void *params);
-void SM_send_command(uint8_t *data);
+uint8_t SM_send_command(uint8_t *data);
 
 #endif

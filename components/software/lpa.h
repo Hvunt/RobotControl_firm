@@ -39,6 +39,7 @@ enum
 {
     LPA_INIT_POINT_ERROR = -10,
     LPA_MOVING_ERROR,
+    LPA_PATH_ERROR,
     LPA_INIT_POINT_IS_OBSTACLE, // point is a obstacle or non exist
     LPA_PATH_CANT_BE_FOUND,
     LPA_POINT_CANT_BE_REACHED = -1,

@@ -4,6 +4,7 @@
 //I2C Settings
 
 #define I2C_STM32_ADDRESS          0x1C
+#define I2C_STM32_PACKET_LENGTH    10
 
 #define I2C_MASTER_SCL_IO          25               /*!< gpio number for I2C master clock */
 #define I2C_MASTER_SDA_IO          26               /*!< gpio number for I2C master data  */
