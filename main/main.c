@@ -466,8 +466,8 @@ void app_main()
 
     initialise_wifi();
     i2c_master_init();
-
-    xTaskCreate(EC_ecTask, "EC_ecTask", 8192, NULL, 6, NULL);
+    
+    // xTaskCreate(EC_ecTask, "EC_ecTask", 8192, NULL, 6, NULL);
     // xTaskCreate(find_path_task, "find_path", 40960, NULL, 6, NULL);
     // xTaskCreate(show_angles_task, "show_angles_task", 2048, NULL, 2, NULL);
     xTaskCreate(sending_sensors_data_task, "sending_sensors_data_task", 6144, NULL, 3, NULL);

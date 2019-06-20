@@ -33,7 +33,7 @@ enum {
 };
 
 void SM_init();
-// void SM_sending_task(void *params);
 uint8_t SM_send_command(uint8_t *data);
+uint8_t SM_get_status(void);
 
 #endif
