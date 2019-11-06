@@ -77,6 +77,14 @@ uint8_t SM_send_command(uint8_t *data)
         ESP_LOGE("SM_sending_task", "%s", esp_err_to_name(ret));
         return SM_CONNECTION_ERROR;
     }
-
-    return SM_get_status();
+    
+    uint8_t error_counter = 0, status = SM_get_status();
+    while (error_counter < 5 || status != SM_OK)
+    {
+        status = SM_get_status();
+        error_counter++;
+        vTaskDelay(1 / portTICK_RATE_MS);
+    }
+    
+    return status;
 }

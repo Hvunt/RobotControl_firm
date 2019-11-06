@@ -22,6 +22,9 @@ static float get_cost(node_t *from, node_t *to);
 static void calc_key(float *key, node_t *current_node, node_t *goal_node);
 // static void get_direction(int8_t x, int8_t y, uint8_t *direction, uint8_t *value);
 static void get_direction(uint16_t goal_x, uint16_t goal_y, uint16_t current_x, uint16_t current_y, uint8_t *direction, uint8_t *value);
+// static void make_obstacles(node_t *map);
+
+
 
 int lpa_init(/*node_t *map,*/ int _x_MAX, int _y_MAX)
 {
@@ -118,11 +121,10 @@ static int lpa_move(list_t **path)
     if (*path == NULL)
         return LPA_PATH_ERROR;
 
-    
+    uint8_t buffer[I2C_STM32_PACKET_LENGTH] = {0};
     uint8_t sm_ret_code = 0;
     while (*path != NULL)
     {
-        uint8_t buffer[I2C_STM32_PACKET_LENGTH] = {0};
         buffer[0] = COMM_INIT;
         buffer[1] = COMM_MOVE;
 
@@ -133,24 +135,18 @@ static int lpa_move(list_t **path)
             sm_ret_code = SM_send_command(buffer);
             if (sm_ret_code != SM_OK)
                 ESP_LOGE(TAG, "Connection with slave MCU with error: %d", sm_ret_code);
-            // if (SM_send_command(buffer) != SM_OK)
-            // ESP_LOGE(TAG, "Connection with slave MCU can't be reached");
-            // vTaskDelay(4000 / portTICK_RATE_MS);
+            vTaskDelay(1500 / portTICK_RATE_MS);
             get_direction((*path)->nodes->x, (*path)->nodes->y, x_current, y_current, &buffer[2], &buffer[4]);
             ESP_LOGI(TAG, "buffer 1:%d 2:%d", buffer[2], buffer[4]);
         }
         sm_ret_code = SM_send_command(buffer);
         if (sm_ret_code != SM_OK)
             ESP_LOGE(TAG, "Connection with slave MCU with error: %d", sm_ret_code);
-        // SM_send_command(buffer);
-        // if (SM_send_command(buffer) != SM_OK)
-        //     ESP_LOGE(TAG, "Connection with slave MCU can't be reached");
+        vTaskDelay(1500 / portTICK_RATE_MS);
         x_current = (*path)->nodes->x;
         y_current = (*path)->nodes->y;
-        ESP_LOGI(TAG, "temp x:%d y:%d", x_current, y_current);
         free(*path);
         *path = (*path)->next;
-        // vTaskDelay(4000 / portTICK_RATE_MS);
     }
     return LPA_OK;
 }
@@ -160,7 +156,7 @@ void lpa_get_current_coords(char *data)
     sprintf(data, "%d:%d", x_current, y_current);
 }
 
-void lpa_free(PQ_list_t *queue /*, list_t *path*/)
+void lpa_free(PQ_list_t *queue)
 {
     PQ_free(&queue);
     // list_free(&path);
@@ -279,25 +275,25 @@ static void get_direction(uint16_t goal_x, uint16_t goal_y, uint16_t current_x, 
     int8_t x = goal_x - current_x,
            y = goal_y - current_y;
     uint8_t snail_next = 0;
-    if (x == 1 && y == 1)
+    if (x == 1 && y == -1)
         snail_next = LPA_DIRECTION_SNAIL_8;
 
-    else if (x == 0 && y == 1)
+    else if (x == 0 && y == -1)
         snail_next = LPA_DIRECTION_SNAIL_7;
 
-    else if (x == 1 && y == -1)
+    else if (x == -1 && y == -1)
         snail_next = LPA_DIRECTION_SNAIL_6;
 
     else if (x == -1 && y == 0)
         snail_next = LPA_DIRECTION_SNAIL_5;
 
-    else if (x == -1 && y == -1)
+    else if (x == -1 && y == 1)
         snail_next = LPA_DIRECTION_SNAIL_4;
 
-    else if (x == 0 && y == -1)
+    else if (x == 0 && y == 1)
         snail_next = LPA_DIRECTION_SNAIL_3;
 
-    else if (x == -1 && y == 1)
+    else if (x == 1 && y == 1)
         snail_next = LPA_DIRECTION_SNAIL_2;
 
     else if (x == 1 && y == 0)
@@ -376,7 +372,7 @@ static void map_init(node_t *map, int x_MAX, int y_MAX)
     }
 
     //only for debug.
-    // make_obstacles();
+    // make_obstacles(map);
 }
 
 static float get_cost(node_t *from, node_t *to)
@@ -401,8 +397,6 @@ void print_map(node_t *map, node_t *current_node, node_t *goal_node)
     {
         if (map[i].isObstacle)
             printf("#");
-        // else if (map[i].x == node->x && map[i].y == node->y)
-        //     printf("O");
         else if (map[i].x == goal_node->x && map[i].y == goal_node->y)
             printf("X");
         else if (map[i].x == current_node->x && map[i].y == current_node->y)
@@ -421,19 +415,20 @@ void print_map(node_t *map, node_t *current_node, node_t *goal_node)
 }
 
 //make obstacles like a island
-// void make_obstacles(void)
+// static void make_obstacles(node_t *map)
 // {
 //     for (int i = 0; i < x_MAX * y_MAX; i += rand() % 30)
 //     {
 //         if (map[i].isObstacle)
 //         {
+            
 //             for (int x = -2; x <= 2; x++)
 //             {
 //                 for (int y = -2; y <= 2; y++)
 //                 {
 //                     if (x != 0 || y != 0)
 //                     {
-//                         node_t *node = get_node_coord(map[i].x + x, map[i].y + y);
+//                         node_t *node = get_node_coord(map, map[i].x + x, map[i].y + y);
 //                         if (node != NULL)
 //                             node->isObstacle = true;
 //                     }

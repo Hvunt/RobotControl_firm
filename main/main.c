@@ -373,24 +373,6 @@ static json_defs_t jparser(char *data, uint16_t length)
     return response;
 }
 
-// void show_angles_task(void *params)
-// {
-//     vTaskDelay(2000 / portTICK_RATE_MS);
-//     while (1)
-//     {
-//         ESP_LOGI(TAG, "Yaw %f", EC_getYaw());
-//         ESP_LOGI(TAG, "Pitch %f", EC_getPitch());
-//         ESP_LOGI(TAG, "Roll %f", EC_getRoll());
-//         vTaskDelay(1000 / portTICK_RATE_MS);
-//     }
-// }
-
-// void find_path_task(void *params)
-// {
-//     ESP_LOGI(TAG, "path founded? %d", lpa_compute_path());
-//     vTaskDelete(NULL);
-// }
-
 void find_path_task(void * parameters)
 {
     int *goal = (int*)parameters;
@@ -458,7 +440,6 @@ void app_main()
         err = nvs_flash_init();
     }
     ESP_ERROR_CHECK(err);
-    // ESP_ERROR_CHECK( heap_trace_init_standalone(trace_record, NUM_RECORDS) );
 
     SL_init();
     SL_setState(SL_INIT);
@@ -467,9 +448,7 @@ void app_main()
     initialise_wifi();
     i2c_master_init();
     
-    // xTaskCreate(EC_ecTask, "EC_ecTask", 8192, NULL, 6, NULL);
-    // xTaskCreate(find_path_task, "find_path", 40960, NULL, 6, NULL);
-    // xTaskCreate(show_angles_task, "show_angles_task", 2048, NULL, 2, NULL);
+    xTaskCreate(EC_ecTask, "EC_ecTask", 8192, NULL, 6, NULL);
     xTaskCreate(sending_sensors_data_task, "sending_sensors_data_task", 6144, NULL, 3, NULL);
     wait_for_ip();
 }

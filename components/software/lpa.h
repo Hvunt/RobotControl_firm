@@ -33,7 +33,6 @@ void lpa_get_current_coords(char *data);
 void lpa_free(PQ_list_t *queue /*, list_t *path*/);
 
 void print_map(node_t *map, node_t *current_node, node_t *goal_node);
-// void make_obstacles(void);
 
 enum
 {
