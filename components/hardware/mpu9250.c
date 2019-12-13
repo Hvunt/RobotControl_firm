@@ -19,7 +19,7 @@ static esp_err_t i2c_master_read_slave(i2c_port_t i2c_num, uint8_t address, uint
 //static float const deg2rad = PI / 180;
 //static float const aRes = 2.0f / 32768.0f, gRes = 250.0f / 32768.0f, mRes = 10
 //		* 4912.0f / 32760.0f;   // scale resolutions per LSB for the sensors
-static float const aRes = 16384.f, gRes = 131, mRes = 0.6f; // scale resolutions per LSB for the sensors
+static float const aRes = 16384.f;//, gRes = 131, mRes = 0.6f; // scale resolutions per LSB for the sensors
 static float magCalFactory[3] = {0.0f, 0.0f, 0.0f};
 static float x_scale_factor = 0.0f, y_scale_factor = 0.0f;
 static float x_offset = 0.0f, y_offset = 0.0f;
@@ -381,7 +381,7 @@ void MPU_CalibrateMag(void)
 
 	//factory calibration
 
-	uint8_t buffer[3];
+	uint8_t buffer[3] = {};
 	// HAL_I2C_Master_Transmit(hi2cP, MPU9250_ID_MAGNET << 1, &data_address, 1,
 	// 		100);
 	// HAL_I2C_Master_Receive(hi2cP, MPU9250_ID_MAGNET << 1, buffer, 3, 100);

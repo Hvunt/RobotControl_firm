@@ -1,7 +1,7 @@
 #ifndef SLAVE_MCU
 #define SLAVE_MCU
 
-#include "configs.h"
+#include "system_configs.h"
 #include "motor_defs.h"
 #include "esp_log.h"
 #include "driver/i2c.h"

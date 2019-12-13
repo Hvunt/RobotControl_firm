@@ -1,11 +1,12 @@
 
 #include "driver/ledc.h"
-#include "configs.h"
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
 #include "esp_log.h"
+
+#include "system_configs.h"
 
 #define LEDC_HS_TIMER          LEDC_TIMER_0
 #define LEDC_HS_MODE           LEDC_HIGH_SPEED_MODE

@@ -10,5 +10,3 @@
 # COMPONENT_SRCDIRS += $(PROJECT_PATH)/components/hardware/
 # COMPONENT_SRCDIRS += $(PROJECT_PATH)/components/software/
 
-COMPONENT_SRCDIRS := . 
-COMPONENT_ADD_INCLUDEDIRS := .

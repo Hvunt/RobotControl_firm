@@ -13,7 +13,7 @@ extern "C" {
 #endif
 
 #include "driver/i2c.h"
-#include "configs.h"
+#include "system_configs.h"
 #include <math.h>
 #include "esp_log.h"
 #include "esp_err.h"

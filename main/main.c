@@ -40,92 +40,143 @@ static void sending_sensors_data_task(void *params);
 
 // static esp_err_t i2c_master_find(i2c_port_t i2c_num, uint8_t address, uint8_t data_wr, size_t size);
 
-static esp_err_t event_handler(void *ctx, system_event_t *event)
+// static esp_err_t event_handler(void *ctx, system_event_t *event)
+// {
+//     switch (event->event_id)
+//     {
+//     case SYSTEM_EVENT_STA_START:
+//         xTaskCreate(smartconfig_task, "smartconfig_task", 4096, NULL, 3, NULL);
+//         break;
+//     case SYSTEM_EVENT_STA_CONNECTED:
+//         /* enable ipv6 */
+//         tcpip_adapter_create_ip6_linklocal(TCPIP_ADAPTER_IF_STA);
+//         break;
+//     case SYSTEM_EVENT_STA_GOT_IP:
+//         xEventGroupSetBits(wifi_event_group, CONNECTED_BIT);
+//         break;
+//     case SYSTEM_EVENT_STA_DISCONNECTED:
+//         esp_wifi_connect();
+//         xEventGroupClearBits(wifi_event_group, CONNECTED_BIT);
+//         break;
+//     case SYSTEM_EVENT_AP_STA_GOT_IP6:
+//         xEventGroupSetBits(wifi_event_group, IPV6_GOTIP_BIT);
+//         ESP_LOGI(TAG, "SYSTEM_EVENT_STA_GOT_IP6");
+
+//         char *ip6 = ip6addr_ntoa(&event->event_info.got_ip6.ip6_info.ip);
+//         ESP_LOGI(TAG, "IPv6: %s", ip6);
+//         break;
+//     default:
+//         break;
+//     }
+//     return ESP_OK;
+// }
+
+static void event_handler(void* arg, esp_event_base_t event_base, 
+                                int32_t event_id, void* event_data)
 {
-    switch (event->event_id)
-    {
-    case SYSTEM_EVENT_STA_START:
+    if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START) {
         xTaskCreate(smartconfig_task, "smartconfig_task", 4096, NULL, 3, NULL);
-        break;
-    case SYSTEM_EVENT_STA_CONNECTED:
-        /* enable ipv6 */
-        tcpip_adapter_create_ip6_linklocal(TCPIP_ADAPTER_IF_STA);
-        break;
-    case SYSTEM_EVENT_STA_GOT_IP:
-        xEventGroupSetBits(wifi_event_group, CONNECTED_BIT);
-        break;
-    case SYSTEM_EVENT_STA_DISCONNECTED:
+    } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) {
         esp_wifi_connect();
         xEventGroupClearBits(wifi_event_group, CONNECTED_BIT);
-        break;
-    case SYSTEM_EVENT_AP_STA_GOT_IP6:
-        xEventGroupSetBits(wifi_event_group, IPV6_GOTIP_BIT);
-        ESP_LOGI(TAG, "SYSTEM_EVENT_STA_GOT_IP6");
+    } else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
+        xEventGroupSetBits(wifi_event_group, CONNECTED_BIT);
+    } else if (event_base == SC_EVENT && event_id == SC_EVENT_SCAN_DONE) {
+        ESP_LOGI(TAG, "Scan done");
+    } else if (event_base == SC_EVENT && event_id == SC_EVENT_FOUND_CHANNEL) {
+        ESP_LOGI(TAG, "Found channel");
+    } else if (event_base == SC_EVENT && event_id == SC_EVENT_GOT_SSID_PSWD) {
+        ESP_LOGI(TAG, "Got SSID and password");
 
-        char *ip6 = ip6addr_ntoa(&event->event_info.got_ip6.ip6_info.ip);
-        ESP_LOGI(TAG, "IPv6: %s", ip6);
-        break;
-    default:
-        break;
+        smartconfig_event_got_ssid_pswd_t *evt = (smartconfig_event_got_ssid_pswd_t *)event_data;
+        wifi_config_t wifi_config;
+        uint8_t ssid[33] = { 0 };
+        uint8_t password[65] = { 0 };
+
+        bzero(&wifi_config, sizeof(wifi_config_t));
+        memcpy(wifi_config.sta.ssid, evt->ssid, sizeof(wifi_config.sta.ssid));
+        memcpy(wifi_config.sta.password, evt->password, sizeof(wifi_config.sta.password));
+        wifi_config.sta.bssid_set = evt->bssid_set;
+        if (wifi_config.sta.bssid_set == true) {
+            memcpy(wifi_config.sta.bssid, evt->bssid, sizeof(wifi_config.sta.bssid));
+        }
+
+        memcpy(ssid, evt->ssid, sizeof(evt->ssid));
+        memcpy(password, evt->password, sizeof(evt->password));
+        ESP_LOGI(TAG, "SSID:%s", ssid);
+        ESP_LOGI(TAG, "PASSWORD:%s", password);
+
+        ESP_ERROR_CHECK( esp_wifi_disconnect() );
+        ESP_ERROR_CHECK( esp_wifi_set_config(ESP_IF_WIFI_STA, &wifi_config) );
+        ESP_ERROR_CHECK( esp_wifi_connect() );
+    } else if (event_base == SC_EVENT && event_id == SC_EVENT_SEND_ACK_DONE) {
+        xEventGroupSetBits(wifi_event_group, ESPTOUCH_DONE_BIT);
     }
-    return ESP_OK;
 }
 
 static void initialise_wifi(void)
 {
-    tcpip_adapter_init();
+    esp_netif_init();
     wifi_event_group = xEventGroupCreate();
-    ESP_ERROR_CHECK(esp_event_loop_init(event_handler, NULL));
+    ESP_ERROR_CHECK(esp_event_loop_create_default());
+    esp_netif_t *sta_netif = esp_netif_create_default_wifi_sta();
+    assert(sta_netif);
 
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+    ESP_ERROR_CHECK( esp_wifi_init(&cfg) );
 
-    ESP_ERROR_CHECK(esp_wifi_init(&cfg));
-    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
-    ESP_ERROR_CHECK(esp_wifi_start());
+    ESP_ERROR_CHECK( esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &event_handler, NULL) );
+    ESP_ERROR_CHECK( esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &event_handler, NULL) );
+    ESP_ERROR_CHECK( esp_event_handler_register(SC_EVENT, ESP_EVENT_ANY_ID, &event_handler, NULL) );
+
+    ESP_ERROR_CHECK( esp_wifi_set_mode(WIFI_MODE_STA) );
+    ESP_ERROR_CHECK( esp_wifi_start() );
 }
 
-static void sc_callback(smartconfig_status_t status, void *pdata)
-{
-    switch (status)
-    {
-    case SC_STATUS_WAIT:
-        ESP_LOGI(TAG, "SC_STATUS_WAIT");
-        break;
-    case SC_STATUS_FIND_CHANNEL:
-        ESP_LOGI(TAG, "SC_STATUS_FINDING_CHANNEL");
-        break;
-    case SC_STATUS_GETTING_SSID_PSWD:
-        ESP_LOGI(TAG, "SC_STATUS_GETTING_SSID_PSWD");
-        break;
-    case SC_STATUS_LINK:
-        ESP_LOGI(TAG, "SC_STATUS_LINK");
-        wifi_config = pdata;
-        ESP_LOGI(TAG, "SSID:%s", wifi_config->sta.ssid);
-        ESP_LOGI(TAG, "PASSWORD:%s", wifi_config->sta.password);
-        ESP_ERROR_CHECK(esp_wifi_disconnect());
-        ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_STA, wifi_config));
-        ESP_ERROR_CHECK(esp_wifi_connect());
-        break;
-    case SC_STATUS_LINK_OVER:
-        ESP_LOGI(TAG, "SC_STATUS_LINK_OVER");
-        if (pdata != NULL)
-        {
-            uint8_t phone_ip[4] = {0};
-            memcpy(phone_ip, (uint8_t *)pdata, 4);
-            ESP_LOGI(TAG, "Phone ip: %d.%d.%d.%d\n", phone_ip[0], phone_ip[1], phone_ip[2], phone_ip[3]);
-        }
-        xEventGroupSetBits(wifi_event_group, ESPTOUCH_DONE_BIT);
-        break;
-    default:
-        break;
-    }
-}
+// static void sc_callback(smartconfig_status_t status, void *pdata)
+// {
+//     switch (status)
+//     {
+//     case SC_STATUS_WAIT:
+//         ESP_LOGI(TAG, "SC_STATUS_WAIT");
+//         break;
+//     case SC_STATUS_FIND_CHANNEL:
+//         ESP_LOGI(TAG, "SC_STATUS_FINDING_CHANNEL");
+//         break;
+//     case SC_STATUS_GETTING_SSID_PSWD:
+//         ESP_LOGI(TAG, "SC_STATUS_GETTING_SSID_PSWD");
+//         break;
+//     case SC_STATUS_LINK:
+//         ESP_LOGI(TAG, "SC_STATUS_LINK");
+//         wifi_config = pdata;
+//         ESP_LOGI(TAG, "SSID:%s", wifi_config->sta.ssid);
+//         ESP_LOGI(TAG, "PASSWORD:%s", wifi_config->sta.password);
+//         ESP_ERROR_CHECK(esp_wifi_disconnect());
+//         ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_STA, wifi_config));
+//         ESP_ERROR_CHECK(esp_wifi_connect());
+//         break;
+//     case SC_STATUS_LINK_OVER:
+//         ESP_LOGI(TAG, "SC_STATUS_LINK_OVER");
+//         if (pdata != NULL)
+//         {
+//             uint8_t phone_ip[4] = {0};
+//             memcpy(phone_ip, (uint8_t *)pdata, 4);
+//             ESP_LOGI(TAG, "Phone ip: %d.%d.%d.%d\n", phone_ip[0], phone_ip[1], phone_ip[2], phone_ip[3]);
+//         }
+//         xEventGroupSetBits(wifi_event_group, ESPTOUCH_DONE_BIT);
+//         break;
+//     default:
+//         break;
+//     }
+// }
 
 void smartconfig_task(void *parm)
 {
     EventBits_t uxBits;
     ESP_ERROR_CHECK(esp_smartconfig_set_type(SC_TYPE_ESPTOUCH));
-    ESP_ERROR_CHECK(esp_smartconfig_start(sc_callback));
+    smartconfig_start_config_t cfg = SMARTCONFIG_START_CONFIG_DEFAULT();
+    ESP_ERROR_CHECK( esp_smartconfig_start(&cfg) );
+    // ESP_ERROR_CHECK(esp_smartconfig_start(sc_callback));
     while (1)
     {
         uxBits = xEventGroupWaitBits(wifi_event_group, CONNECTED_BIT | ESPTOUCH_DONE_BIT, true, false, portMAX_DELAY);
